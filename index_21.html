@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Bitácora</title>
+
+<!-- PWA / "agregar a inicio" -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#1F2229" />
+<link rel="apple-touch-icon" href="/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Bitácora" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  body { background:#1F2229; font-family:'Inter',sans-serif; }
+  .font-display { font-family:'Space Grotesk',sans-serif; }
+  .font-mono { font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body class="text-[#F5F5F5] px-5 py-8 min-h-screen">
+
+<div class="max-w-sm mx-auto">
+  <p class="text-[10px] tracking-[0.2em] text-[#B8BCC4] font-mono uppercase mb-1">Bitácora</p>
+  <h1 id="dateHeader" class="font-display font-semibold text-xl mb-7"></h1>
+
+  <!-- Escritura diaria -->
+  <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5 mb-4">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-medium">✍️ Escritura diaria</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <span class="text-[#E8A33D]">🔥</span>
+        <span id="streakCount" class="font-mono text-xs text-[#E8A33D]"></span>
+      </div>
+    </div>
+
+    <button id="toggleTodayBtn"
+      class="w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors">
+      <span id="toggleCheck" class="w-5 h-5 rounded-md flex items-center justify-center border"></span>
+      <span id="toggleLabel" class="text-sm font-medium"></span>
+    </button>
+
+    <div id="last14" class="flex gap-[3px] mt-4"></div>
+    <p class="font-mono text-[10px] text-[#8A8F99] mt-1.5">últimos 14 días</p>
+  </section>
+
+  <!-- Metas de la semana -->
+  <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-sm font-medium">🎯 Metas de la semana</span>
+      <span id="goalsCount" class="font-mono text-xs text-[#B8BCC4]"></span>
+    </div>
+
+    <div id="goalsList" class="space-y-2 mb-3"></div>
+
+    <div class="flex gap-2">
+      <input id="newGoalInput" placeholder="ej: escribir carta a mi mamá"
+        class="flex-1 bg-white/[0.05] border border-white/[0.16] rounded-lg px-3 py-2 text-sm placeholder:text-[#8A8F99] outline-none focus:border-[#4FA8A0]/50" />
+      <button id="addGoalBtn"
+        class="w-9 h-9 rounded-lg bg-[#4FA8A0]/[0.15] border border-[#4FA8A0]/40 flex items-center justify-center shrink-0 text-[#4FA8A0] font-bold">+</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const todayKey = () => new Date().toISOString().slice(0,10);
+const STORAGE_KEY = "bitacora-data";
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { journalLog: {}, goals: [] };
+  } catch { return { journalLog: {}, goals: [] }; }
+}
+function save(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let state = load();
+
+function calcStreak(log) {
+  let streak = 0;
+  let d = new Date();
+  if (!log[todayKey()]) d.setDate(d.getDate() - 1);
+  while (true) {
+    const key = d.toISOString().slice(0,10);
+    if (log[key]) { streak++; d.setDate(d.getDate() - 1); } else break;
+  }
+  return streak;
+}
+
+function render() {
+  document.getElementById("dateHeader").textContent =
+    new Date().toLocaleDateString("es-EC", { weekday: "long", day: "numeric", month: "long" });
+
+  const doneToday = !!state.journalLog[todayKey()];
+  const streak = calcStreak(state.journalLog);
+  document.getElementById("streakCount").textContent = streak;
+
+  const btn = document.getElementById("toggleTodayBtn");
+  const check = document.getElementById("toggleCheck");
+  const label = document.getElementById("toggleLabel");
+  if (doneToday) {
+    btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors bg-[#E8A33D]/[0.12] border-[#E8A33D]/50 text-[#E8A33D]";
+    check.className = "w-5 h-5 rounded-md flex items-center justify-center border bg-[#E8A33D] border-[#E8A33D] text-[#1F2229] text-xs font-bold";
+    check.textContent = "✓";
+    label.textContent = "Escrito hoy";
+  } else {
+    btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
+    check.className = "w-5 h-5 rounded-md flex items-center justify-center border border-white/30";
+    check.textContent = "";
+    label.textContent = "Marcar como hecho";
+  }
+
+  const last14El = document.getElementById("last14");
+  last14El.innerHTML = "";
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const v = !!state.journalLog[d.toISOString().slice(0,10)];
+    const span = document.createElement("span");
+    span.className = `flex-1 h-2.5 rounded-sm ${v ? "bg-[#E8A33D]" : "bg-white/[0.1]"}`;
+    last14El.appendChild(span);
+  }
+
+  const doneGoals = state.goals.filter(g => g.done).length;
+  document.getElementById("goalsCount").textContent = `${doneGoals}/${state.goals.length}`;
+
+  const list = document.getElementById("goalsList");
+  list.innerHTML = "";
+  if (state.goals.length === 0) {
+    const p = document.createElement("p");
+    p.className = "text-xs text-[#8A8F99] py-2";
+    p.textContent = "Sin metas todavía. Agregá la primera abajo.";
+    list.appendChild(p);
+  }
+  state.goals.forEach(g => {
+    const row = document.createElement("div");
+    row.className = "flex items-center gap-3 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
+
+    const box = document.createElement("button");
+    box.className = `w-5 h-5 rounded-md flex items-center justify-center shrink-0 border text-[10px] font-bold ${g.done ? "bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229]" : "border-white/30 text-transparent"}`;
+    box.textContent = "✓";
+    box.onclick = () => { g.done = !g.done; save(state); render(); };
+
+    const span = document.createElement("span");
+    span.className = `flex-1 text-sm ${g.done ? "line-through text-[#8A8F99]" : "text-[#F5F5F5]"}`;
+    span.textContent = g.text;
+
+    const del = document.createElement("button");
+    del.className = "text-[#8A8F99] hover:text-[#F5F5F5] transition-colors";
+    del.textContent = "✕";
+    del.onclick = () => { state.goals = state.goals.filter(x => x.id !== g.id); save(state); render(); };
+
+    row.appendChild(box);
+    row.appendChild(span);
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById("toggleTodayBtn").onclick = () => {
+  const key = todayKey();
+  state.journalLog[key] = !state.journalLog[key];
+  save(state);
+  render();
+};
+
+document.getElementById("addGoalBtn").onclick = addGoal;
+document.getElementById("newGoalInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addGoal();
+});
+function addGoal() {
+  const input = document.getElementById("newGoalInput");
+  const text = input.value.trim();
+  if (!text) return;
+  state.goals.push({ id: Date.now(), text, done: false });
+  input.value = "";
+  save(state);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
