@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Bitácora</title>
 
-<!-- PWA / "agregar a inicio" -->
 <link rel="manifest" href="/manifest.json" />
 <meta name="theme-color" content="#1F2229" />
 <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -23,112 +22,264 @@
   .font-mono { font-family:'JetBrains Mono',monospace; }
 </style>
 </head>
-<body class="text-[#F5F5F5] px-5 py-8 min-h-screen">
+<body class="text-[#F5F5F5] px-5 py-8 min-h-screen pb-24">
 
 <div class="max-w-sm mx-auto">
   <p class="text-[10px] tracking-[0.2em] text-[#B8BCC4] font-mono uppercase mb-1">Bitácora</p>
-  <h1 id="dateHeader" class="font-display font-semibold text-xl mb-7"></h1>
+  <h1 id="dateHeader" class="font-display font-semibold text-xl mb-5"></h1>
 
-  <!-- Escritura diaria -->
-  <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5 mb-4">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-2">
-        <span class="text-sm font-medium">✍️ Escritura diaria</span>
+  <div class="flex gap-2 mb-5">
+    <button id="tabHoyBtn" class="flex-1 py-2 rounded-lg text-sm font-medium border transition-colors">Hoy</button>
+    <button id="tabEjBtn" class="flex-1 py-2 rounded-lg text-sm font-medium border transition-colors">Ejercicio</button>
+  </div>
+
+  <div id="panelHoy">
+    <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5 mb-4">
+      <span class="text-sm font-medium">Hábitos</span>
+      <div id="habitsList" class="space-y-3 mt-4"></div>
+    </section>
+
+    <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-medium">Metas de la semana</span>
+        <span id="goalsCount" class="font-mono text-xs text-[#B8BCC4]"></span>
       </div>
-      <div class="flex items-center gap-1">
-        <span class="text-[#E8A33D]">🔥</span>
-        <span id="streakCount" class="font-mono text-xs text-[#E8A33D]"></span>
+      <p id="weekRangeNote" class="font-mono text-[10px] text-[#8A8F99] mb-4"></p>
+      <div id="goalsList" class="space-y-2 mb-3"></div>
+      <div class="flex gap-2">
+        <input id="newGoalInput" placeholder="ej: escribir carta a mi mama"
+          class="flex-1 bg-white/[0.05] border border-white/[0.16] rounded-lg px-3 py-2 text-sm placeholder:text-[#8A8F99] outline-none focus:border-[#4FA8A0]/50" />
+        <button id="addGoalBtn" class="w-9 h-9 rounded-lg bg-[#4FA8A0]/[0.15] border border-[#4FA8A0]/40 flex items-center justify-center shrink-0 text-[#4FA8A0] font-bold">+</button>
       </div>
-    </div>
+    </section>
+  </div>
 
-    <button id="toggleTodayBtn"
-      class="w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors">
-      <span id="toggleCheck" class="w-5 h-5 rounded-md flex items-center justify-center border"></span>
-      <span id="toggleLabel" class="text-sm font-medium"></span>
-    </button>
+  <div id="panelEj" class="hidden">
+    <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5 mb-4">
+      <div class="flex items-center justify-between mb-1">
+        <span id="dayBadge" class="text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded"></span>
+        <span id="weekProgress" class="font-mono text-[10px] text-[#8A8F99]"></span>
+      </div>
+      <h2 id="dayLabel" class="font-display font-semibold text-lg mt-2 mb-4"></h2>
+      <div id="fixedExercises" class="space-y-2"></div>
+      <div id="flexibleBlock" class="hidden">
+        <button id="flexToggleBtn" class="w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3">
+          <span id="flexCheck" class="w-5 h-5 rounded-md flex items-center justify-center border"></span>
+          <span id="flexLabel" class="text-sm font-medium"></span>
+        </button>
+        <input id="flexNote" placeholder="ej: piscina 30 min"
+          class="w-full bg-white/[0.05] border border-white/[0.16] rounded-lg px-3 py-2 text-sm placeholder:text-[#8A8F99] outline-none focus:border-[#4FA8A0]/50" />
+      </div>
+    </section>
 
-    <div id="last14" class="flex gap-[3px] mt-4"></div>
-    <p class="font-mono text-[10px] text-[#8A8F99] mt-1.5">últimos 14 días</p>
-  </section>
-
-  <!-- Metas de la semana -->
-  <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5">
-    <div class="flex items-center justify-between mb-4">
-      <span class="text-sm font-medium">🎯 Metas de la semana</span>
-      <span id="goalsCount" class="font-mono text-xs text-[#B8BCC4]"></span>
-    </div>
-
-    <div id="goalsList" class="space-y-2 mb-3"></div>
-
-    <div class="flex gap-2">
-      <input id="newGoalInput" placeholder="ej: escribir carta a mi mamá"
-        class="flex-1 bg-white/[0.05] border border-white/[0.16] rounded-lg px-3 py-2 text-sm placeholder:text-[#8A8F99] outline-none focus:border-[#4FA8A0]/50" />
-      <button id="addGoalBtn"
-        class="w-9 h-9 rounded-lg bg-[#4FA8A0]/[0.15] border border-[#4FA8A0]/40 flex items-center justify-center shrink-0 text-[#4FA8A0] font-bold">+</button>
-    </div>
-  </section>
+    <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5">
+      <span class="text-sm font-medium">Progreso de pesos</span>
+      <p class="font-mono text-[10px] text-[#8A8F99] mt-1 mb-3">primer registro -> ultimo registro</p>
+      <div id="progressList" class="space-y-2"></div>
+    </section>
+  </div>
 </div>
 
 <script>
-const todayKey = () => new Date().toISOString().slice(0,10);
 const STORAGE_KEY = "bitacora-data";
+const pad = (n) => String(n).padStart(2, "0");
+const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayKey = () => fmtDate(new Date());
+
+const ROUTINE = {
+  1: { label: "Push - Pecho, Hombro, Triceps", type: "fixed", core: true, exercises: [
+    { name: "Press banca", target: "4x8" },
+    { name: "Press militar", target: "3x10" },
+    { name: "Press inclinado mancuernas", target: "3x10" },
+    { name: "Elevaciones laterales", target: "3x15" },
+    { name: "Fondos en paralelas", target: "3x12" },
+  ]},
+  2: { label: "Pull - Espalda, Biceps", type: "fixed", core: true, exercises: [
+    { name: "Dominadas", target: "4x8" },
+    { name: "Remo con barra", target: "3x10" },
+    { name: "Jalon al pecho", target: "3x12" },
+    { name: "Curl biceps barra Z", target: "3x12" },
+    { name: "Face pull", target: "3x15" },
+  ]},
+  3: { label: "Piernas - Cuads, Isquios, Gluteos", type: "fixed", core: true, exercises: [
+    { name: "Sentadilla", target: "4x8" },
+    { name: "Peso muerto rumano", target: "3x10" },
+    { name: "Prensa", target: "3x12" },
+    { name: "Curl femoral", target: "3x12" },
+    { name: "Elevacion de talones", target: "3x15" },
+  ]},
+  4: { label: "Piscina o Bailoterapia", type: "flexible" },
+  5: { label: "Brazos - Biceps, Triceps, Hombro", type: "fixed", core: false, exercises: [
+    { name: "Curl de barra", target: "4x10" },
+    { name: "Curl martillo", target: "3x12" },
+    { name: "Extension triceps polea", target: "3x12" },
+    { name: "Fondos en banco", target: "3x15" },
+    { name: "Elevaciones laterales", target: "3x15" },
+    { name: "Elevaciones frontales", target: "3x12" },
+  ]},
+  6: { label: "Rugby o Gym", type: "flexible" },
+  0: { label: "Futbol", type: "flexible" },
+};
 
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { journalLog: {}, goals: [] };
-  } catch { return { journalLog: {}, goals: [] }; }
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
 }
-function save(data) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
+function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 
-let state = load();
+let state = Object.assign({
+  habits: null,
+  habitLogs: {},
+  journalLog: null, // dato viejo, se migra abajo si existe
+  goals: [],
+  goalsHistory: {},
+  currentGoalsWeekKey: null,
+  exerciseLog: {},
+}, load());
+
+// --- migracion: journalLog viejo -> habitLogs.escritura, y seed de habitos default ---
+if (!state.habits) {
+  state.habits = [
+    { id: "escritura", name: "Escritura diaria" },
+    { id: "agradecer", name: "Agradecer antes de dormir" },
+  ];
+}
+if (state.journalLog && !state.habitLogs["escritura"]) {
+  state.habitLogs["escritura"] = state.journalLog;
+}
+delete state.journalLog;
+state.habits.forEach(h => { if (!state.habitLogs[h.id]) state.habitLogs[h.id] = {}; });
+save(state);
+
+// --- semana (lunes a domingo) ---
+function mondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return fmtDate(d);
+}
+function ensureWeekReset() {
+  const wk = mondayOf(new Date());
+  if (state.currentGoalsWeekKey !== wk) {
+    if (state.currentGoalsWeekKey && state.goals.length > 0) {
+      state.goalsHistory[state.currentGoalsWeekKey] = state.goals;
+    }
+    state.goals = [];
+    state.currentGoalsWeekKey = wk;
+    save(state);
+  }
+}
+ensureWeekReset();
 
 function calcStreak(log) {
   let streak = 0;
   let d = new Date();
   if (!log[todayKey()]) d.setDate(d.getDate() - 1);
   while (true) {
-    const key = d.toISOString().slice(0,10);
+    const key = fmtDate(d);
     if (log[key]) { streak++; d.setDate(d.getDate() - 1); } else break;
   }
   return streak;
 }
+function calcBestStreak(log) {
+  const dates = Object.keys(log).filter(k => log[k]).sort();
+  let best = 0, run = 0, prev = null;
+  for (const ds of dates) {
+    if (prev) {
+      const diffDays = (new Date(ds) - new Date(prev)) / 86400000;
+      run = diffDays === 1 ? run + 1 : 1;
+    } else run = 1;
+    best = Math.max(best, run);
+    prev = ds;
+  }
+  return best;
+}
 
-function render() {
+function paintTabs(active) {
+  const hoy = document.getElementById("tabHoyBtn");
+  const ej = document.getElementById("tabEjBtn");
+  const on = "flex-1 py-2 rounded-lg text-sm font-medium border transition-colors bg-[#E8A33D]/[0.12] border-[#E8A33D]/50 text-[#E8A33D]";
+  const off = "flex-1 py-2 rounded-lg text-sm font-medium border transition-colors bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
+  hoy.className = active === "hoy" ? on : off;
+  ej.className = active === "ej" ? on : off;
+  document.getElementById("panelHoy").classList.toggle("hidden", active !== "hoy");
+  document.getElementById("panelEj").classList.toggle("hidden", active !== "ej");
+}
+document.getElementById("tabHoyBtn").onclick = () => { paintTabs("hoy"); };
+document.getElementById("tabEjBtn").onclick = () => { paintTabs("ej"); renderEjercicio(); };
+
+// ===================== HABITOS =====================
+function renderHabits() {
+  const el = document.getElementById("habitsList");
+  el.innerHTML = "";
+  state.habits.forEach(h => {
+    const log = state.habitLogs[h.id] || (state.habitLogs[h.id] = {});
+    const doneToday = !!log[todayKey()];
+    const streak = calcStreak(log);
+    const best = calcBestStreak(log);
+    const note = streak === 0 && best > 0 ? `racha reiniciada - mejor: ${best}` : (best > streak ? `mejor: ${best}` : "");
+
+    const card = document.createElement("div");
+    card.className = "bg-white/[0.03] border border-white/[0.08] rounded-lg p-3";
+
+    const top = document.createElement("div");
+    top.className = "flex items-center justify-between mb-2.5";
+    top.innerHTML = `<span class="text-sm font-medium">${h.name}</span>
+      <span class="font-mono text-xs text-[#E8A33D]">${streak}</span>`;
+
+    const btn = document.createElement("button");
+    const paint = () => {
+      if (doneToday) {
+        btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-3 border transition-colors bg-[#E8A33D]/[0.12] border-[#E8A33D]/50 text-[#E8A33D]";
+        btn.innerHTML = `<span class="w-4 h-4 rounded flex items-center justify-center border bg-[#E8A33D] border-[#E8A33D] text-[#1F2229] text-[9px] font-bold">OK</span><span class="text-sm font-medium">Hecho hoy</span>`;
+      } else {
+        btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-3 border transition-colors bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
+        btn.innerHTML = `<span class="w-4 h-4 rounded flex items-center justify-center border border-white/30"></span><span class="text-sm font-medium">Marcar como hecho</span>`;
+      }
+    };
+    paint();
+    btn.onclick = () => {
+      const key = todayKey();
+      log[key] = !log[key];
+      save(state);
+      renderHabits();
+    };
+
+    const strip = document.createElement("div");
+    strip.className = "flex gap-[3px] mt-2.5";
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const v = !!log[fmtDate(d)];
+      const span = document.createElement("span");
+      span.className = `flex-1 h-2 rounded-sm ${v ? "bg-[#E8A33D]" : "bg-white/[0.1]"}`;
+      strip.appendChild(span);
+    }
+
+    const noteEl = document.createElement("p");
+    noteEl.className = "font-mono text-[10px] text-[#8A8F99] mt-1";
+    noteEl.textContent = note;
+
+    card.appendChild(top);
+    card.appendChild(btn);
+    card.appendChild(strip);
+    if (note) card.appendChild(noteEl);
+    el.appendChild(card);
+  });
+}
+
+// ===================== GOALS =====================
+function renderGoals() {
   document.getElementById("dateHeader").textContent =
     new Date().toLocaleDateString("es-EC", { weekday: "long", day: "numeric", month: "long" });
 
-  const doneToday = !!state.journalLog[todayKey()];
-  const streak = calcStreak(state.journalLog);
-  document.getElementById("streakCount").textContent = streak;
-
-  const btn = document.getElementById("toggleTodayBtn");
-  const check = document.getElementById("toggleCheck");
-  const label = document.getElementById("toggleLabel");
-  if (doneToday) {
-    btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors bg-[#E8A33D]/[0.12] border-[#E8A33D]/50 text-[#E8A33D]";
-    check.className = "w-5 h-5 rounded-md flex items-center justify-center border bg-[#E8A33D] border-[#E8A33D] text-[#1F2229] text-xs font-bold";
-    check.textContent = "✓";
-    label.textContent = "Escrito hoy";
-  } else {
-    btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
-    check.className = "w-5 h-5 rounded-md flex items-center justify-center border border-white/30";
-    check.textContent = "";
-    label.textContent = "Marcar como hecho";
-  }
-
-  const last14El = document.getElementById("last14");
-  last14El.innerHTML = "";
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const v = !!state.journalLog[d.toISOString().slice(0,10)];
-    const span = document.createElement("span");
-    span.className = `flex-1 h-2.5 rounded-sm ${v ? "bg-[#E8A33D]" : "bg-white/[0.1]"}`;
-    last14El.appendChild(span);
-  }
+  const wkStart = new Date(state.currentGoalsWeekKey);
+  const wkEnd = new Date(wkStart); wkEnd.setDate(wkEnd.getDate() + 6);
+  const opts = { day: "numeric", month: "short" };
+  document.getElementById("weekRangeNote").textContent =
+    `semana del ${wkStart.toLocaleDateString("es-EC", opts)} al ${wkEnd.toLocaleDateString("es-EC", opts)}`;
 
   const doneGoals = state.goals.filter(g => g.done).length;
   document.getElementById("goalsCount").textContent = `${doneGoals}/${state.goals.length}`;
@@ -138,56 +289,197 @@ function render() {
   if (state.goals.length === 0) {
     const p = document.createElement("p");
     p.className = "text-xs text-[#8A8F99] py-2";
-    p.textContent = "Sin metas todavía. Agregá la primera abajo.";
+    p.textContent = "Sin metas todavia. Agrega la primera abajo.";
     list.appendChild(p);
   }
   state.goals.forEach(g => {
     const row = document.createElement("div");
     row.className = "flex items-center gap-3 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
-
     const box = document.createElement("button");
     box.className = `w-5 h-5 rounded-md flex items-center justify-center shrink-0 border text-[10px] font-bold ${g.done ? "bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229]" : "border-white/30 text-transparent"}`;
-    box.textContent = "✓";
-    box.onclick = () => { g.done = !g.done; save(state); render(); };
-
+    box.textContent = "OK";
+    box.onclick = () => { g.done = !g.done; save(state); renderGoals(); };
     const span = document.createElement("span");
     span.className = `flex-1 text-sm ${g.done ? "line-through text-[#8A8F99]" : "text-[#F5F5F5]"}`;
     span.textContent = g.text;
-
     const del = document.createElement("button");
     del.className = "text-[#8A8F99] hover:text-[#F5F5F5] transition-colors";
-    del.textContent = "✕";
-    del.onclick = () => { state.goals = state.goals.filter(x => x.id !== g.id); save(state); render(); };
-
-    row.appendChild(box);
-    row.appendChild(span);
-    row.appendChild(del);
+    del.textContent = "x";
+    del.onclick = () => { state.goals = state.goals.filter(x => x.id !== g.id); save(state); renderGoals(); };
+    row.appendChild(box); row.appendChild(span); row.appendChild(del);
     list.appendChild(row);
   });
 }
 
-document.getElementById("toggleTodayBtn").onclick = () => {
-  const key = todayKey();
-  state.journalLog[key] = !state.journalLog[key];
-  save(state);
-  render();
-};
-
 document.getElementById("addGoalBtn").onclick = addGoal;
-document.getElementById("newGoalInput").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") addGoal();
-});
+document.getElementById("newGoalInput").addEventListener("keydown", (e) => { if (e.key === "Enter") addGoal(); });
 function addGoal() {
   const input = document.getElementById("newGoalInput");
   const text = input.value.trim();
   if (!text) return;
   state.goals.push({ id: Date.now(), text, done: false });
-  input.value = "";
-  save(state);
-  render();
+  input.value = ""; save(state); renderGoals();
 }
 
-render();
+// ===================== EJERCICIO =====================
+function getDayEntry(dateKey) {
+  if (!state.exerciseLog[dateKey]) state.exerciseLog[dateKey] = { entries: {} };
+  return state.exerciseLog[dateKey];
+}
+
+function renderEjercicio() {
+  const now = new Date();
+  const dow = now.getDay();
+  const routine = ROUTINE[dow];
+  const dk = todayKey();
+  const dayEntry = getDayEntry(dk);
+
+  document.getElementById("dayBadge").textContent = routine.type === "fixed"
+    ? (routine.core ? "Dia fijo" : "Dia de gym")
+    : "Dia flexible";
+  document.getElementById("dayBadge").className = `text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded ${
+    routine.core ? "bg-[#E8A33D]/20 text-[#E8A33D]" : "bg-white/10 text-[#B8BCC4]"
+  }`;
+  document.getElementById("dayLabel").textContent = routine.label;
+
+  const wkStart = new Date(mondayOf(now));
+  let fixedDone = 0, activeDays = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(wkStart); d.setDate(d.getDate() + i);
+    const key = fmtDate(d);
+    const entry = state.exerciseLog[key];
+    const r = ROUTINE[d.getDay()];
+    const isDone = entry && Object.values(entry.entries).some(e => e.done);
+    if (isDone) {
+      activeDays++;
+      if (r.core) fixedDone++;
+    }
+  }
+  document.getElementById("weekProgress").textContent = `3 fijos: ${fixedDone}/3 - semana: ${activeDays}/7`;
+
+  const fixedEl = document.getElementById("fixedExercises");
+  const flexEl = document.getElementById("flexibleBlock");
+
+  if (routine.type === "fixed") {
+    flexEl.classList.add("hidden");
+    fixedEl.classList.remove("hidden");
+    fixedEl.innerHTML = "";
+    routine.exercises.forEach(ex => {
+      const saved = dayEntry.entries[ex.name] || { done: false, weight: "" };
+      const row = document.createElement("div");
+      row.className = "flex items-center gap-3 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
+
+      const box = document.createElement("button");
+      box.className = `w-5 h-5 rounded-md flex items-center justify-center shrink-0 border text-[10px] font-bold ${saved.done ? "bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229]" : "border-white/30 text-transparent"}`;
+      box.textContent = "OK";
+      box.onclick = () => {
+        const cur = dayEntry.entries[ex.name] || { done: false, weight: "" };
+        cur.done = !cur.done;
+        dayEntry.entries[ex.name] = cur;
+        save(state); renderEjercicio();
+      };
+
+      const info = document.createElement("div");
+      info.className = "flex-1 min-w-0";
+      info.innerHTML = `<p class="text-sm font-medium truncate">${ex.name}</p><p class="font-mono text-[10px] text-[#8A8F99]">${ex.target}</p>`;
+
+      const weightInput = document.createElement("input");
+      weightInput.type = "number";
+      weightInput.placeholder = "kg";
+      weightInput.value = saved.weight || "";
+      weightInput.className = "w-14 bg-white/[0.05] border border-white/[0.16] rounded-md px-2 py-1.5 text-sm text-center outline-none focus:border-[#4FA8A0]/50";
+      weightInput.oninput = (e) => {
+        const cur = dayEntry.entries[ex.name] || { done: false, weight: "" };
+        cur.weight = e.target.value;
+        dayEntry.entries[ex.name] = cur;
+        save(state);
+      };
+      weightInput.onblur = renderProgress;
+
+      row.appendChild(box); row.appendChild(info); row.appendChild(weightInput);
+      fixedEl.appendChild(row);
+    });
+  } else {
+    fixedEl.classList.add("hidden");
+    flexEl.classList.remove("hidden");
+    const saved = dayEntry.entries["actividad"] || { done: false, note: "" };
+    const btn = document.getElementById("flexToggleBtn");
+    const check = document.getElementById("flexCheck");
+    const label = document.getElementById("flexLabel");
+    const noteInput = document.getElementById("flexNote");
+    noteInput.value = saved.note || "";
+
+    function paintFlex() {
+      if (saved.done) {
+        btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3 bg-[#4FA8A0]/[0.12] border-[#4FA8A0]/50 text-[#4FA8A0]";
+        check.className = "w-5 h-5 rounded-md flex items-center justify-center border bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229] text-xs font-bold";
+        check.textContent = "OK";
+        label.textContent = "Hecho hoy";
+      } else {
+        btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3 bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
+        check.className = "w-5 h-5 rounded-md flex items-center justify-center border border-white/30";
+        check.textContent = "";
+        label.textContent = "Marcar como hecho";
+      }
+    }
+    paintFlex();
+    btn.onclick = () => {
+      saved.done = !saved.done;
+      dayEntry.entries["actividad"] = saved;
+      save(state); paintFlex();
+    };
+    noteInput.oninput = (e) => {
+      saved.note = e.target.value;
+      dayEntry.entries["actividad"] = saved;
+      save(state);
+    };
+  }
+
+  renderProgress();
+}
+
+function renderProgress() {
+  const series = {};
+  Object.keys(state.exerciseLog).sort().forEach(dateKey => {
+    const entry = state.exerciseLog[dateKey];
+    Object.entries(entry.entries).forEach(([name, v]) => {
+      if (name === "actividad") return;
+      if (v.weight && !isNaN(parseFloat(v.weight))) {
+        if (!series[name]) series[name] = [];
+        series[name].push({ date: dateKey, weight: parseFloat(v.weight) });
+      }
+    });
+  });
+
+  const el = document.getElementById("progressList");
+  el.innerHTML = "";
+  const names = Object.keys(series);
+  if (names.length === 0) {
+    const p = document.createElement("p");
+    p.className = "text-xs text-[#8A8F99]";
+    p.textContent = "Todavia no hay pesos registrados.";
+    el.appendChild(p);
+    return;
+  }
+  names.forEach(name => {
+    const s = series[name];
+    const first = s[0].weight;
+    const last = s[s.length - 1].weight;
+    const delta = last - first;
+    const row = document.createElement("div");
+    row.className = "flex items-center justify-between bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
+    row.innerHTML = `
+      <span class="text-sm">${name}</span>
+      <span class="font-mono text-xs ${delta > 0 ? "text-[#4FA8A0]" : delta < 0 ? "text-[#E8A33D]" : "text-[#8A8F99]"}">
+        ${first}kg -> ${last}kg ${delta !== 0 ? (delta > 0 ? "+" : "-") + Math.abs(delta) : ""}
+      </span>`;
+    el.appendChild(row);
+  });
+}
+
+renderHabits();
+renderGoals();
+paintTabs("hoy");
 </script>
 </body>
 </html>
