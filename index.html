@@ -60,8 +60,14 @@
         <span id="dayBadge" class="text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded"></span>
         <span id="weekProgress" class="font-mono text-[10px] text-[#8A8F99]"></span>
       </div>
-      <h2 id="dayLabel" class="font-display font-semibold text-lg mt-2 mb-4"></h2>
+      <h2 id="dayLabel" class="font-display font-semibold text-lg mt-2 mb-1"></h2>
+      <p class="text-[10px] text-[#8A8F99] mb-4">Podés editar nombre, series/reps, o agregar/quitar ejercicios de hoy.</p>
+
       <div id="fixedExercises" class="space-y-2"></div>
+      <button id="addExerciseBtn" class="hidden w-full mt-2 py-2.5 rounded-lg border border-dashed border-white/20 text-xs text-[#8A8F99] hover:text-[#B8BCC4] hover:border-white/30 transition-colors">
+        + Agregar ejercicio
+      </button>
+
       <div id="flexibleBlock" class="hidden">
         <button id="flexToggleBtn" class="w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3">
           <span id="flexCheck" class="w-5 h-5 rounded-md flex items-center justify-center border"></span>
@@ -72,9 +78,14 @@
       </div>
     </section>
 
+    <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5 mb-4">
+      <span class="text-sm font-medium">Resumen del mes</span>
+      <div id="monthSummary" class="mt-3 space-y-2"></div>
+    </section>
+
     <section class="bg-[#2A2E37] border border-white/[0.12] rounded-xl p-5">
       <span class="text-sm font-medium">Progreso de pesos</span>
-      <p class="font-mono text-[10px] text-[#8A8F99] mt-1 mb-3">primer registro -> ultimo registro</p>
+      <p class="font-mono text-[10px] text-[#8A8F99] mt-1 mb-3">historico completo, primer -> ultimo registro</p>
       <div id="progressList" class="space-y-2"></div>
     </section>
   </div>
@@ -84,7 +95,9 @@
 const STORAGE_KEY = "bitacora-data";
 const pad = (n) => String(n).padStart(2, "0");
 const fmtDate = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const monthKey = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const todayKey = () => fmtDate(new Date());
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 
 const ROUTINE = {
   1: { label: "Push - Pecho, Hombro, Triceps", type: "fixed", core: true, exercises: [
@@ -132,14 +145,13 @@ function save(data) { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
 let state = Object.assign({
   habits: null,
   habitLogs: {},
-  journalLog: null, // dato viejo, se migra abajo si existe
+  journalLog: null,
   goals: [],
   goalsHistory: {},
   currentGoalsWeekKey: null,
   exerciseLog: {},
 }, load());
 
-// --- migracion: journalLog viejo -> habitLogs.escritura, y seed de habitos default ---
 if (!state.habits) {
   state.habits = [
     { id: "escritura", name: "Escritura diaria" },
@@ -151,9 +163,28 @@ if (state.journalLog && !state.habitLogs["escritura"]) {
 }
 delete state.journalLog;
 state.habits.forEach(h => { if (!state.habitLogs[h.id]) state.habitLogs[h.id] = {}; });
+
+// migracion de estructura vieja de ejercicio (entries: {nombre: {done,weight}}) -> exercises: [{id,name,target,done,weight,reps}]
+Object.keys(state.exerciseLog).forEach(dateKey => {
+  const entry = state.exerciseLog[dateKey];
+  if (entry.entries && !entry.exercises && !entry.activity) {
+    const hasActividad = "actividad" in entry.entries;
+    if (hasActividad) {
+      entry.activity = { done: entry.entries.actividad.done, note: entry.entries.actividad.note || "" };
+      entry.exercises = [];
+    } else {
+      entry.exercises = Object.entries(entry.entries).map(([name, v]) => ({
+        id: uid(), name, target: "", done: v.done, weight: v.weight || "", reps: ""
+      }));
+      entry.activity = null;
+    }
+    delete entry.entries;
+  }
+  if (!entry.exercises) entry.exercises = [];
+  if (entry.activity === undefined) entry.activity = null;
+});
 save(state);
 
-// --- semana (lunes a domingo) ---
 function mondayOf(date) {
   const d = new Date(date);
   const day = d.getDay();
@@ -227,8 +258,7 @@ function renderHabits() {
 
     const top = document.createElement("div");
     top.className = "flex items-center justify-between mb-2.5";
-    top.innerHTML = `<span class="text-sm font-medium">${h.name}</span>
-      <span class="font-mono text-xs text-[#E8A33D]">${streak}</span>`;
+    top.innerHTML = `<span class="text-sm font-medium">${h.name}</span><span class="font-mono text-xs text-[#E8A33D]">${streak}</span>`;
 
     const btn = document.createElement("button");
     const paint = () => {
@@ -241,12 +271,7 @@ function renderHabits() {
       }
     };
     paint();
-    btn.onclick = () => {
-      const key = todayKey();
-      log[key] = !log[key];
-      save(state);
-      renderHabits();
-    };
+    btn.onclick = () => { const key = todayKey(); log[key] = !log[key]; save(state); renderHabits(); };
 
     const strip = document.createElement("div");
     strip.className = "flex gap-[3px] mt-2.5";
@@ -257,14 +282,11 @@ function renderHabits() {
       span.className = `flex-1 h-2 rounded-sm ${v ? "bg-[#E8A33D]" : "bg-white/[0.1]"}`;
       strip.appendChild(span);
     }
-
     const noteEl = document.createElement("p");
     noteEl.className = "font-mono text-[10px] text-[#8A8F99] mt-1";
     noteEl.textContent = note;
 
-    card.appendChild(top);
-    card.appendChild(btn);
-    card.appendChild(strip);
+    card.appendChild(top); card.appendChild(btn); card.appendChild(strip);
     if (note) card.appendChild(noteEl);
     el.appendChild(card);
   });
@@ -310,7 +332,6 @@ function renderGoals() {
     list.appendChild(row);
   });
 }
-
 document.getElementById("addGoalBtn").onclick = addGoal;
 document.getElementById("newGoalInput").addEventListener("keydown", (e) => { if (e.key === "Enter") addGoal(); });
 function addGoal() {
@@ -323,7 +344,17 @@ function addGoal() {
 
 // ===================== EJERCICIO =====================
 function getDayEntry(dateKey) {
-  if (!state.exerciseLog[dateKey]) state.exerciseLog[dateKey] = { entries: {} };
+  if (!state.exerciseLog[dateKey]) {
+    const dow = new Date(dateKey + "T00:00:00").getDay();
+    const routine = ROUTINE[dow];
+    state.exerciseLog[dateKey] = {
+      exercises: routine.type === "fixed"
+        ? routine.exercises.map(ex => ({ id: uid(), name: ex.name, target: ex.target, done: false, weight: "", reps: "" }))
+        : [],
+      activity: routine.type === "flexible" ? { done: false, note: "" } : null,
+    };
+    save(state);
+  }
   return state.exerciseLog[dateKey];
 }
 
@@ -334,12 +365,8 @@ function renderEjercicio() {
   const dk = todayKey();
   const dayEntry = getDayEntry(dk);
 
-  document.getElementById("dayBadge").textContent = routine.type === "fixed"
-    ? (routine.core ? "Dia fijo" : "Dia de gym")
-    : "Dia flexible";
-  document.getElementById("dayBadge").className = `text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded ${
-    routine.core ? "bg-[#E8A33D]/20 text-[#E8A33D]" : "bg-white/10 text-[#B8BCC4]"
-  }`;
+  document.getElementById("dayBadge").textContent = routine.type === "fixed" ? (routine.core ? "Dia fijo" : "Dia de gym") : "Dia flexible";
+  document.getElementById("dayBadge").className = `text-[10px] font-mono uppercase tracking-wide px-2 py-0.5 rounded ${routine.core ? "bg-[#E8A33D]/20 text-[#E8A33D]" : "bg-white/10 text-[#B8BCC4]"}`;
   document.getElementById("dayLabel").textContent = routine.label;
 
   const wkStart = new Date(mondayOf(now));
@@ -349,104 +376,119 @@ function renderEjercicio() {
     const key = fmtDate(d);
     const entry = state.exerciseLog[key];
     const r = ROUTINE[d.getDay()];
-    const isDone = entry && Object.values(entry.entries).some(e => e.done);
-    if (isDone) {
-      activeDays++;
-      if (r.core) fixedDone++;
-    }
+    const isDone = entry && ((entry.exercises && entry.exercises.some(e => e.done)) || (entry.activity && entry.activity.done));
+    if (isDone) { activeDays++; if (r.core) fixedDone++; }
   }
   document.getElementById("weekProgress").textContent = `3 fijos: ${fixedDone}/3 - semana: ${activeDays}/7`;
 
   const fixedEl = document.getElementById("fixedExercises");
+  const addBtn = document.getElementById("addExerciseBtn");
   const flexEl = document.getElementById("flexibleBlock");
 
   if (routine.type === "fixed") {
     flexEl.classList.add("hidden");
     fixedEl.classList.remove("hidden");
+    addBtn.classList.remove("hidden");
     fixedEl.innerHTML = "";
-    routine.exercises.forEach(ex => {
-      const saved = dayEntry.entries[ex.name] || { done: false, weight: "" };
+    dayEntry.exercises.forEach(ex => {
       const row = document.createElement("div");
-      row.className = "flex items-center gap-3 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
+      row.className = "bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
+
+      const line1 = document.createElement("div");
+      line1.className = "flex items-center gap-2 mb-2";
 
       const box = document.createElement("button");
-      box.className = `w-5 h-5 rounded-md flex items-center justify-center shrink-0 border text-[10px] font-bold ${saved.done ? "bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229]" : "border-white/30 text-transparent"}`;
+      box.className = `w-5 h-5 rounded-md flex items-center justify-center shrink-0 border text-[10px] font-bold ${ex.done ? "bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229]" : "border-white/30 text-transparent"}`;
       box.textContent = "OK";
-      box.onclick = () => {
-        const cur = dayEntry.entries[ex.name] || { done: false, weight: "" };
-        cur.done = !cur.done;
-        dayEntry.entries[ex.name] = cur;
+      box.onclick = () => { ex.done = !ex.done; save(state); renderEjercicio(); };
+
+      const nameInput = document.createElement("input");
+      nameInput.value = ex.name;
+      nameInput.className = "flex-1 min-w-0 bg-transparent text-sm font-medium outline-none border-b border-transparent focus:border-white/20";
+      nameInput.oninput = (e) => { ex.name = e.target.value; save(state); };
+
+      const del = document.createElement("button");
+      del.className = "text-[#8A8F99] hover:text-[#F5F5F5] text-xs shrink-0";
+      del.textContent = "x";
+      del.onclick = () => {
+        dayEntry.exercises = dayEntry.exercises.filter(e2 => e2.id !== ex.id);
         save(state); renderEjercicio();
       };
 
-      const info = document.createElement("div");
-      info.className = "flex-1 min-w-0";
-      info.innerHTML = `<p class="text-sm font-medium truncate">${ex.name}</p><p class="font-mono text-[10px] text-[#8A8F99]">${ex.target}</p>`;
+      line1.appendChild(box); line1.appendChild(nameInput); line1.appendChild(del);
+
+      const line2 = document.createElement("div");
+      line2.className = "flex items-center gap-2 pl-7";
+
+      const targetInput = document.createElement("input");
+      targetInput.value = ex.target || "";
+      targetInput.placeholder = "series x reps";
+      targetInput.className = "w-20 bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] font-mono outline-none focus:border-[#4FA8A0]/50";
+      targetInput.oninput = (e) => { ex.target = e.target.value; save(state); };
+
+      const repsInput = document.createElement("input");
+      repsInput.value = ex.reps || "";
+      repsInput.placeholder = "reps reales";
+      repsInput.className = "flex-1 min-w-0 bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] font-mono outline-none focus:border-[#4FA8A0]/50";
+      repsInput.oninput = (e) => { ex.reps = e.target.value; save(state); };
 
       const weightInput = document.createElement("input");
       weightInput.type = "number";
       weightInput.placeholder = "kg";
-      weightInput.value = saved.weight || "";
-      weightInput.className = "w-14 bg-white/[0.05] border border-white/[0.16] rounded-md px-2 py-1.5 text-sm text-center outline-none focus:border-[#4FA8A0]/50";
-      weightInput.oninput = (e) => {
-        const cur = dayEntry.entries[ex.name] || { done: false, weight: "" };
-        cur.weight = e.target.value;
-        dayEntry.entries[ex.name] = cur;
-        save(state);
-      };
-      weightInput.onblur = renderProgress;
+      weightInput.value = ex.weight || "";
+      weightInput.className = "w-14 bg-white/[0.05] border border-white/[0.12] rounded-md px-2 py-1 text-[11px] font-mono text-center outline-none focus:border-[#4FA8A0]/50";
+      weightInput.oninput = (e) => { ex.weight = e.target.value; save(state); };
+      weightInput.onblur = () => { renderProgress(); renderMonthSummary(); };
 
-      row.appendChild(box); row.appendChild(info); row.appendChild(weightInput);
+      line2.appendChild(targetInput); line2.appendChild(repsInput); line2.appendChild(weightInput);
+
+      row.appendChild(line1); row.appendChild(line2);
       fixedEl.appendChild(row);
     });
+
+    addBtn.onclick = () => {
+      dayEntry.exercises.push({ id: uid(), name: "Nuevo ejercicio", target: "", done: false, weight: "", reps: "" });
+      save(state); renderEjercicio();
+    };
   } else {
     fixedEl.classList.add("hidden");
+    addBtn.classList.add("hidden");
     flexEl.classList.remove("hidden");
-    const saved = dayEntry.entries["actividad"] || { done: false, note: "" };
+    const activity = dayEntry.activity || (dayEntry.activity = { done: false, note: "" });
     const btn = document.getElementById("flexToggleBtn");
     const check = document.getElementById("flexCheck");
     const label = document.getElementById("flexLabel");
     const noteInput = document.getElementById("flexNote");
-    noteInput.value = saved.note || "";
+    noteInput.value = activity.note || "";
 
     function paintFlex() {
-      if (saved.done) {
+      if (activity.done) {
         btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3 bg-[#4FA8A0]/[0.12] border-[#4FA8A0]/50 text-[#4FA8A0]";
         check.className = "w-5 h-5 rounded-md flex items-center justify-center border bg-[#4FA8A0] border-[#4FA8A0] text-[#1F2229] text-xs font-bold";
-        check.textContent = "OK";
-        label.textContent = "Hecho hoy";
+        check.textContent = "OK"; label.textContent = "Hecho hoy";
       } else {
         btn.className = "w-full flex items-center justify-center gap-2 rounded-lg py-4 border transition-colors mb-3 bg-white/[0.05] border-white/[0.16] text-[#B8BCC4]";
         check.className = "w-5 h-5 rounded-md flex items-center justify-center border border-white/30";
-        check.textContent = "";
-        label.textContent = "Marcar como hecho";
+        check.textContent = ""; label.textContent = "Marcar como hecho";
       }
     }
     paintFlex();
-    btn.onclick = () => {
-      saved.done = !saved.done;
-      dayEntry.entries["actividad"] = saved;
-      save(state); paintFlex();
-    };
-    noteInput.oninput = (e) => {
-      saved.note = e.target.value;
-      dayEntry.entries["actividad"] = saved;
-      save(state);
-    };
+    btn.onclick = () => { activity.done = !activity.done; save(state); paintFlex(); };
+    noteInput.oninput = (e) => { activity.note = e.target.value; save(state); };
   }
 
   renderProgress();
+  renderMonthSummary();
 }
 
 function renderProgress() {
   const series = {};
   Object.keys(state.exerciseLog).sort().forEach(dateKey => {
     const entry = state.exerciseLog[dateKey];
-    Object.entries(entry.entries).forEach(([name, v]) => {
-      if (name === "actividad") return;
-      if (v.weight && !isNaN(parseFloat(v.weight))) {
-        if (!series[name]) series[name] = [];
-        series[name].push({ date: dateKey, weight: parseFloat(v.weight) });
+    (entry.exercises || []).forEach(ex => {
+      if (ex.weight && !isNaN(parseFloat(ex.weight))) {
+        if (!series[ex.name]) series[ex.name] = [];
+        series[ex.name].push({ date: dateKey, weight: parseFloat(ex.weight) });
       }
     });
   });
@@ -463,18 +505,70 @@ function renderProgress() {
   }
   names.forEach(name => {
     const s = series[name];
-    const first = s[0].weight;
-    const last = s[s.length - 1].weight;
-    const delta = last - first;
+    const first = s[0].weight, last = s[s.length - 1].weight, delta = last - first;
     const row = document.createElement("div");
     row.className = "flex items-center justify-between bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5";
-    row.innerHTML = `
-      <span class="text-sm">${name}</span>
+    row.innerHTML = `<span class="text-sm">${name}</span>
       <span class="font-mono text-xs ${delta > 0 ? "text-[#4FA8A0]" : delta < 0 ? "text-[#E8A33D]" : "text-[#8A8F99]"}">
         ${first}kg -> ${last}kg ${delta !== 0 ? (delta > 0 ? "+" : "-") + Math.abs(delta) : ""}
       </span>`;
     el.appendChild(row);
   });
+}
+
+function renderMonthSummary() {
+  const now = new Date();
+  const mk = monthKey(now);
+  const daysInMonthSoFar = now.getDate();
+
+  let trainedDays = 0, fixedTarget = 0, fixedDone = 0, exerciseCount = {};
+  for (let day = 1; day <= daysInMonthSoFar; day++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), day);
+    const key = fmtDate(d);
+    const r = ROUTINE[d.getDay()];
+    const entry = state.exerciseLog[key];
+    const isDone = entry && ((entry.exercises && entry.exercises.some(e => e.done)) || (entry.activity && entry.activity.done));
+    if (r.core) {
+      fixedTarget++;
+      if (isDone) fixedDone++;
+    }
+    if (isDone) {
+      trainedDays++;
+      (entry.exercises || []).forEach(ex => { if (ex.done) exerciseCount[ex.name] = (exerciseCount[ex.name] || 0) + 1; });
+    }
+  }
+
+  const el = document.getElementById("monthSummary");
+  el.innerHTML = "";
+  const stat = document.createElement("div");
+  stat.className = "flex gap-2";
+  stat.innerHTML = `
+    <div class="flex-1 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5 text-center">
+      <p class="font-mono text-lg text-[#E8A33D]">${trainedDays}/${daysInMonthSoFar}</p>
+      <p class="text-[10px] text-[#8A8F99] mt-0.5">dias activos</p>
+    </div>
+    <div class="flex-1 bg-white/[0.05] border border-white/[0.12] rounded-lg px-3 py-2.5 text-center">
+      <p class="font-mono text-lg text-[#4FA8A0]">${fixedDone}/${fixedTarget}</p>
+      <p class="text-[10px] text-[#8A8F99] mt-0.5">3 fijos cumplidos</p>
+    </div>`;
+  el.appendChild(stat);
+
+  const names = Object.keys(exerciseCount);
+  if (names.length > 0) {
+    const p = document.createElement("p");
+    p.className = "text-[10px] text-[#8A8F99] mt-1";
+    p.textContent = "veces por ejercicio este mes:";
+    el.appendChild(p);
+    const list = document.createElement("div");
+    list.className = "flex flex-wrap gap-1.5 mt-1";
+    names.forEach(n => {
+      const tag = document.createElement("span");
+      tag.className = "text-[10px] font-mono bg-white/[0.06] rounded px-2 py-1 text-[#B8BCC4]";
+      tag.textContent = `${n} x${exerciseCount[n]}`;
+      list.appendChild(tag);
+    });
+    el.appendChild(list);
+  }
 }
 
 renderHabits();
