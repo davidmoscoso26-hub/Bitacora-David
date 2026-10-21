@@ -52,12 +52,18 @@ function viewMore() {
     <div class="switch-row"><div><b>Acumular lo que sobra</b><span>El sobrante de cada sobre pasa al mes siguiente</span></div>
       <button class="sw" data-act="toggle-carry" aria-pressed="${state.settings.carryOver}" aria-label="Acumular sobrante"></button></div>
   </div>
+  <div class="card"><h3 class="display">Correo del banco</h3>
+    <p class="hint" style="margin-bottom:10px">Pega el link de tu Apps Script para que los consumos de tu tarjeta lleguen solos a "Por clasificar".</p>
+    <input class="inp" data-in="inbox-url" placeholder="https://script.google.com/macros/s/…/exec?k=…" value="${esc(state.settings.inboxUrl || "")}" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <button class="btn ghost" style="margin-top:10px" data-act="inbox-sync-now">↻ Buscar gastos nuevos</button>
+    <p class="hint" style="margin-top:8px">${state.settings.inboxUrl ? (state.settings.lastSync ? `Última revisión: ${new Date(state.settings.lastSync).toLocaleString("es", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })} · ${esc(state.settings.lastSyncMsg || "")}` : "Aún no se ha revisado.") : "Sin conectar."}</p></div>
   <div class="card"><h3 class="display">Respaldo de tus datos</h3>
     <p class="hint" style="margin-bottom:12px">Tus datos viven en este teléfono. Guarda un respaldo de vez en cuando, sobre todo antes de cambiar de celular o borrar datos del navegador.</p>
     <div class="btn-row"><button class="btn ghost" style="margin:0" data-act="backup-export">⬇ Descargar</button><button class="btn ghost" style="margin:0" data-act="backup-copy">⧉ Copiar</button></div>
     <button class="btn ghost" style="margin-top:10px" data-act="backup-import">⬆ Restaurar desde archivo</button>
     <input type="file" id="importFile" accept="application/json,.json" class="hide" data-ch="import-file"></div></section>`;
 }
+INPUTS["inbox-url"] = t => { state.settings.inboxUrl = t.value.trim(); save(); };
 ACTIONS["set-theme"] = d => { state.settings.theme = d.v; save(); applyTheme(); refresh(); };
 ACTIONS["toggle-carry"] = () => { state.settings.carryOver = !state.settings.carryOver; save(); refresh(); };
 
@@ -104,14 +110,14 @@ function boot() {
   ensureWeekReset();
   const added = runRecurring();
   render();
-  syncInbox();
+  syncInbox(false);
   if (added.length) toast(`Se agregó automáticamente: ${added.join(", ")}`);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     const a = runRecurring(); ensureWeekReset();
     if (!sheetOpen()) render();
     if (a.length) toast(`Se agregó automáticamente: ${a.join(", ")}`);
-    syncInbox();
+    syncInbox(false);
   });
 }
 boot();

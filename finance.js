@@ -237,7 +237,7 @@ ACTIONS["save-expense"] = () => {
     const e = { id: uid(), amountCents: cents, date, kind: draft.kind, targetId: draft.targetId, paymentMethod: draft.pay, note: draft.note.trim(), recurringId: null, paid: false };
     exps().push(e);
     const ibItem = draft.inboxId ? inbox().find(x => x.id === draft.inboxId) : null;
-    if (ibItem) { state.budget.inbox = inbox().filter(x => x.id !== ibItem.id); e.fromInbox = ibItem.id; }
+    if (ibItem) { learn(ibItem, draft.kind, draft.targetId); state.budget.inbox = inbox().filter(x => x.id !== ibItem.id); e.fromInbox = ibItem.id; }
     else state.settings.lastPayment = lastPay;
     save(); closeSheet(); refresh();
     let msg = `${money(cents)} en ${cat.short}`, tone = "";

@@ -116,7 +116,7 @@ function migrate(s) {
   b.recurring = b.recurring || [];
   b.transfers = b.transfers || [];
   b.recurringDone = b.recurringDone || {};
-  b.inbox = b.inbox || []; b.inboxSeen = b.inboxSeen || {};
+  b.inbox = b.inbox || []; b.inboxSeen = b.inboxSeen || {}; b.rules = b.rules || {};
   Object.entries(FUNDS_DEFAULT).forEach(([fid, def]) => {
     const f = b.funds[fid] = b.funds[fid] || clone(def);
     if (f.name === OLD_FUND_NAMES[fid]) f.name = def.name;
@@ -138,7 +138,7 @@ function migrate(s) {
   }
   b.recurringDone["rec-renta:2026-10"] = true; // octubre ya está pagado
 
-  s.settings = Object.assign({ theme: "auto", carryOver: false, lastPayment: "" }, s.settings || {});
+  s.settings = Object.assign({ theme: "auto", carryOver: false, lastPayment: "", inboxUrl: "", lastSync: 0, lastSyncMsg: "" }, s.settings || {});
   s.version = 2;
   return s;
 }
