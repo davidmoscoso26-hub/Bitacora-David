@@ -116,6 +116,7 @@ function migrate(s) {
   b.recurring = b.recurring || [];
   b.transfers = b.transfers || [];
   b.recurringDone = b.recurringDone || {};
+  b.inbox = b.inbox || []; b.inboxSeen = b.inboxSeen || {};
   Object.entries(FUNDS_DEFAULT).forEach(([fid, def]) => {
     const f = b.funds[fid] = b.funds[fid] || clone(def);
     if (f.name === OLD_FUND_NAMES[fid]) f.name = def.name;

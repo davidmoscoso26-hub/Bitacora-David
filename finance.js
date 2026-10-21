@@ -164,7 +164,10 @@ function frequent() {
 const chipHTML = c => `<button class="chip" style="--c:${c.color}" aria-pressed="${!!draft && draft.kind === c.kind && draft.targetId === c.id}" data-act="pick-cat" data-kind="${c.kind}" data-id="${c.id}"><span>${c.emoji}</span>${esc(c.short)}</button>`;
 
 function openAdd(opts = {}) {
-  if (opts.editId) {
+  const ib = opts.inboxId ? inbox().find(x => x.id === opts.inboxId) : null;
+  if (ib) {
+    draft = { editId: null, inboxId: ib.id, str: (ib.amountCents / 100).toFixed(2), kind: ib.kind, targetId: ib.targetId, date: ib.date, pay: ib.pay || "", note: ib.note || ib.merchant || "" };
+  } else if (opts.editId) {
     const e = exps().find(x => x.id === opts.editId);
     if (!e) return;
     draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "" };
@@ -233,7 +236,9 @@ ACTIONS["save-expense"] = () => {
   } else {
     const e = { id: uid(), amountCents: cents, date, kind: draft.kind, targetId: draft.targetId, paymentMethod: draft.pay, note: draft.note.trim(), recurringId: null, paid: false };
     exps().push(e);
-    state.settings.lastPayment = lastPay;
+    const ibItem = draft.inboxId ? inbox().find(x => x.id === draft.inboxId) : null;
+    if (ibItem) { state.budget.inbox = inbox().filter(x => x.id !== ibItem.id); e.fromInbox = ibItem.id; }
+    else state.settings.lastPayment = lastPay;
     save(); closeSheet(); refresh();
     let msg = `${money(cents)} en ${cat.short}`, tone = "";
     if (draft.kind === "envelope") {
@@ -244,7 +249,7 @@ ACTIONS["save-expense"] = () => {
       const f = state.budget.funds[draft.targetId];
       msg += ` · quedan ${money(f.totalCents - fundSpent(draft.targetId))} del fondo`;
     }
-    toast(msg, { tone, action: "Deshacer", fn: () => { state.budget.expenses = exps().filter(x => x.id !== e.id); save(); refresh(); } });
+    toast(msg, { tone, action: "Deshacer", fn: () => { state.budget.expenses = exps().filter(x => x.id !== e.id); if (ibItem) inbox().push(ibItem); save(); refresh(); } });
   }
   draft = null;
 };

@@ -104,12 +104,14 @@ function boot() {
   ensureWeekReset();
   const added = runRecurring();
   render();
+  syncInbox();
   if (added.length) toast(`Se agregó automáticamente: ${added.join(", ")}`);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     const a = runRecurring(); ensureWeekReset();
     if (!sheetOpen()) render();
     if (a.length) toast(`Se agregó automáticamente: ${a.join(", ")}`);
+    syncInbox();
   });
 }
 boot();

@@ -60,6 +60,7 @@ function viewHome() {
     <p class="legend-note">El anillo se colorea según en qué gastaste. La marca blanca es dónde deberías ir hoy.</p>
   </section>
   ${rent ? `<p class="hint" style="margin:10px 4px 0;text-align:center">🔑 Renta del mes ${money(rent)} · va aparte, fuera de los sobres</p>` : ""}
+  ${inboxBanner()}
   ${sug.map((s, i) => `<div class="alert"><span style="font-size:22px">⚠️</span><p><b>${esc(ENV[s.to].short)}</b> se pasó ${money(s.need)}. <b>${esc(ENV[s.from].short)}</b> tiene holgura.</p>
     <button class="btn-s" data-act="do-suggest" data-i="${i}">Mover ${moneyR(s.cents)}</button></div>`).join("")}
   ${unpaidTotal > 0 ? `<button class="cardbal" data-act="open-card"><span class="ico">💳</span><div><b>Debes ${money(unpaidTotal)} en la tarjeta</b><span>${unpaid.length} ${unpaid.length === 1 ? "gasto" : "gastos"} sin pagar · toca para marcarlos</span></div><span class="chev muted">›</span></button>` : ""}

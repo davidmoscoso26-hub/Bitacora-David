@@ -1,0 +1,14 @@
+[
+ {"id":"1a146c724cace2d3","amountCents":1313,"date":"2026-10-16","merchant":"LIDL","note":"Lidl","kind":"envelope","targetId":"comida","pay":"Tarjeta de crédito"},
+ {"id":"1a14bb459bebaf19","amountCents":11920,"date":"2026-10-17","merchant":"MARSHALLS","note":"Marshalls: 2 zapatos, buzo, camiseta, hoodie","kind":"fund","targetId":"instalacion","pay":"Tarjeta de crédito"},
+ {"id":"1a14f131bc41bd4e","amountCents":2560,"date":"2026-10-18","merchant":"LAS DELICIAS DEL ECU","note":"Desayuno en Staten Island (Las Delicias del Ecuador)","kind":"envelope","targetId":"salidas","pay":"Tarjeta de crédito"},
+ {"id":"1a14f179c4d51ddd","amountCents":420,"date":"2026-10-18","merchant":"NJTRANSIT BUS","note":"NJ Transit bus","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"1a14f3ccbae3ca25","amountCents":300,"date":"2026-10-18","merchant":"MTA PAYGO","note":"MTA OMNY","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"1a14fe6ae154c808","amountCents":2004,"date":"2026-10-18","merchant":"H&M STATEN ISLAND","note":"H&M","kind":"envelope","targetId":"ropa","pay":"Tarjeta de crédito"},
+ {"id":"1a1501d240fb5923","amountCents":300,"date":"2026-10-18","merchant":"MTA PAYGO","note":"MTA OMNY","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"1a1501e2e53e2d91","amountCents":300,"date":"2026-10-18","merchant":"MTA PAYGO","note":"MTA OMNY (¿duplicado? 1 min después)","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"1a15038e25056cba","amountCents":420,"date":"2026-10-18","merchant":"NJTRANSIT BUS","note":"NJ Transit bus","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"1a15125f821dd7fb","amountCents":5989,"date":"2026-10-18","merchant":"LIDL","note":"Lidl","kind":"envelope","targetId":"comida","pay":"Tarjeta de crédito"},
+ {"id":"1a151d48ade1adda","amountCents":3550,"date":"2026-10-18","merchant":"NJTRANSIT BUS","note":"NJ Transit (varios pasajes)","kind":"envelope","targetId":"transporte","pay":"Tarjeta de crédito"},
+ {"id":"manual-20261020-almuerzo","amountCents":1000,"date":"2026-10-20","merchant":"Almuerzo","note":"Almuerzo (efectivo)","kind":"envelope","targetId":"comida","pay":"Efectivo"}
+]
