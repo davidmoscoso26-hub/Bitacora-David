@@ -1,1 +1,5 @@
-[]
+[
+ {"id":"manual-20261021-lidl-comida","amountCents":1600,"date":"2026-10-21","merchant":"Lidl (manual)","note":"Lidl: comida y agua","kind":"envelope","targetId":"comida","pay":"Tarjeta de crédito"},
+ {"id":"manual-20261021-lidl-hogar","amountCents":2400,"date":"2026-10-21","merchant":"Lidl (manual)","note":"Hogar básico: detergente, suavizante y jabones","kind":"fund","targetId":"instalacion","pay":"Tarjeta de crédito"},
+ {"id":"manual-20261021-tabaco","amountCents":1500,"date":"2026-10-21","merchant":"Tabaco (manual)","note":"Tabaco (1 al mes)","kind":"envelope","targetId":"gustos","pay":""}
+]
