@@ -20,6 +20,7 @@ const REGLAS = [
   [/MARSHALLS|TJ MAXX|ROSS |IKEA|HOME DEPOT/i, "fund", "instalacion"],
   [/PLANET FITNESS|GYM|FITNESS/i, "envelope", "gym"],
   [/LAUNDR|LAVANDER/i, "envelope", "lavanderia"],
+  [/SMOKE|TOBACCO|CIGAR|VAPE/i, "envelope", "gustos"],
 ];
 
 function doGet(e) {

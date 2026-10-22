@@ -25,11 +25,12 @@ function inboxSheetHTML() {
         <span class="ico">${c.emoji}</span>
         <span class="row-b"><b>${esc(it.note || it.merchant)}</b><span>${dayShort(it.date)} · ${esc(c.short)}${dup ? " · ⚠ ¿ya lo anotaste?" : ""}</span></span></button>
       <span class="row-r">${money(it.amountCents)}</span>
+      <button class="x" data-act="split-inbox" data-id="${esc(it.id)}" aria-label="Dividir" title="Dividir en varios sobres">✂</button>
       <button class="btn-s" data-act="accept-inbox" data-id="${esc(it.id)}" aria-label="Aceptar" ${it.kind ? "" : "disabled style=\"opacity:.35\""}>✓</button>
       <button class="x" data-act="dismiss-inbox" data-id="${esc(it.id)}" aria-label="Descartar">✕</button></div>`;
   }).join("");
   return `<div class="sheet-h"><h3>Por clasificar</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>
-    <p class="hint" style="margin:4px 0 12px">Toca ✓ si el sobre sugerido está bien, toca la fila para cambiarlo, o ✕ para descartar. La app recuerda tus elecciones.</p>
+    <p class="hint" style="margin:4px 0 12px">Toca ✓ si el sobre sugerido está bien, la fila para cambiarlo, ✂ si el cobro fue de varias cosas, o ✕ para descartar. La app recuerda tus elecciones.</p>
     <div class="list">${rows}</div>
     ${ready ? `<button class="btn" data-act="accept-all">Aceptar ${ready} ${ready === 1 ? "sugerida" : "sugeridas"}</button>` : ""}`;
 }
@@ -88,3 +89,59 @@ async function syncInbox(manual) {
   } finally { syncing = false; }
 }
 ACTIONS["inbox-sync-now"] = () => syncInbox(true);
+
+/* ===================== dividir un cobro ===================== */
+let split = null;
+const catKey = (kind, id) => kind + ":" + id;
+function splitOptions(sel) {
+  const o = (k, c) => `<option value="${k}" ${sel === k ? "selected" : ""}>${c.emoji} ${esc(c.short)}</option>`;
+  return `<option value="" ${sel ? "" : "selected"} disabled>Elegir sobre…</option>
+    <optgroup label="Sobres del mes">${ENVELOPES.map(e => o(catKey("envelope", e.id), e)).join("")}</optgroup>
+    <optgroup label="Fondos del viaje">${Object.entries(state.budget.funds).map(([id, f]) => o(catKey("fund", id), { emoji: f.emoji, short: f.short })).join("")}</optgroup>`;
+}
+function splitCalc() {
+  const last = split.parts.length - 1;
+  const used = split.parts.slice(0, last).reduce((s, p) => s + (parseCents(p.str) || 0), 0);
+  split.rest = split.total - used;
+  const ok = split.rest > 0 && split.parts.every((p, i) => (i === last ? true : parseCents(p.str) > 0) && p.key);
+  return ok;
+}
+function paintSplit() {
+  const ok = splitCalc(), last = split.parts.length - 1;
+  openSheet(`<div class="sheet-h"><h3>Dividir ${money(split.total)}</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>
+    <p class="hint" style="margin:4px 0 12px">${esc(split.label)}. Reparte el cobro; la última parte se calcula sola.</p>
+    ${split.parts.map((p, i) => `<div class="row" style="margin-bottom:8px;gap:8px">
+      ${i === last ? `<span class="row-r" id="splitRest" style="min-width:84px;text-align:left;color:${split.rest > 0 ? "" : "var(--over)"}">${money(Math.max(split.rest, 0))}</span>`
+        : `<input class="inp" style="width:92px;padding:10px" inputmode="decimal" placeholder="0.00" data-in="split-amt" data-i="${i}" value="${esc(p.str)}" aria-label="Monto">`}
+      <select class="inp" style="flex:1;min-width:0;padding:10px" data-ch="split-cat" data-i="${i}">${splitOptions(p.key)}</select>
+      ${last > 1 && i > 0 ? `<button class="x" data-act="split-del" data-i="${i}" aria-label="Quitar">✕</button>` : ""}</div>`).join("")}
+    <button class="btn ghost" data-act="split-add">＋ Otra parte</button>
+    <button class="btn" id="splitSave" data-act="split-save" ${ok ? "" : "disabled"}>${ok ? "Guardar " + split.parts.length + " gastos" : split.rest <= 0 ? "Las partes superan el total" : "Completa monto y sobre"}</button>`);
+}
+ACTIONS["split-inbox"] = d => {
+  const it = inbox().find(x => x.id === d.id); if (!it) return;
+  split = { id: it.id, total: it.amountCents, label: `${it.note || it.merchant} · ${dayShort(it.date)}`, parts: [{ str: "", key: it.kind ? catKey(it.kind, it.targetId) : "" }, { str: "", key: "" }] };
+  paintSplit();
+};
+INPUTS["split-amt"] = t => {
+  split.parts[+t.dataset.i].str = t.value;
+  const ok = splitCalc(), r = $("#splitRest"), b = $("#splitSave");
+  if (r) { r.textContent = money(Math.max(split.rest, 0)); r.style.color = split.rest > 0 ? "" : "var(--over)"; }
+  if (b) { b.disabled = !ok; b.textContent = ok ? `Guardar ${split.parts.length} gastos` : split.rest <= 0 ? "Las partes superan el total" : "Completa monto y sobre"; }
+};
+CHANGES["split-cat"] = t => { split.parts[+t.dataset.i].key = t.value; paintSplit(); };
+ACTIONS["split-add"] = () => { split.parts.splice(split.parts.length - 1, 0, { str: "", key: "" }); paintSplit(); };
+ACTIONS["split-del"] = d => { split.parts.splice(+d.i, 1); paintSplit(); };
+ACTIONS["split-save"] = () => {
+  if (!split || !splitCalc()) return;
+  const it = inbox().find(x => x.id === split.id); if (!it) return;
+  const made = split.parts.map((p, i) => {
+    const cents = i === split.parts.length - 1 ? split.rest : parseCents(p.str);
+    const [kind, targetId] = p.key.split(":");
+    const e = { id: uid(), amountCents: cents, date: it.date, kind, targetId, paymentMethod: it.pay || "", note: `${it.note || it.merchant} · ${catOf(kind, targetId).short}`, recurringId: null, paid: false, fromInbox: it.id };
+    exps().push(e); return e;
+  });
+  state.budget.inbox = inbox().filter(x => x.id !== it.id);
+  save(); split = null; repaintInbox();
+  toast(`Dividido en ${made.length} gastos`, { action: "Deshacer", fn: () => { const ids = new Set(made.map(e => e.id)); state.budget.expenses = exps().filter(x => !ids.has(x.id)); inbox().push(it); save(); refresh(); } });
+};

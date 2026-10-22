@@ -48,17 +48,18 @@ const ENVELOPES = [
   { id: "corte", name: "Corte de pelo", short: "Pelo", emoji: "✂️", color: "#B5E048" },
   { id: "gym", name: "Gym", short: "Gym", emoji: "🏋️", color: "#FF6FB5" },
   { id: "proteina", name: "Proteína", short: "Proteína", emoji: "🥤", color: "#38C8E8" },
+  { id: "gustos", name: "Gustos personales", short: "Gustos", emoji: "✨", color: "#D9A066" },
 ];
 const ENV = Object.fromEntries(ENVELOPES.map(e => [e.id, e]));
 const FIXED = { id: "renta", name: "Renta", short: "Renta", emoji: "🔑", color: "#A8B3C7" };
 
 // montos en centavos
-const TEMPLATE_NORMAL = { comida: 40000, salidas: 15000, transporte: 16000, fijosEc: 10000, lavanderia: 5000, ropa: 7500, aseo: 3000, corte: 2500, gym: 2500, proteina: 2500 };
-const TEMPLATE_OCT26 = { comida: 18500, salidas: 6500, transporte: 8000, fijosEc: 5000, aseo: 1500, lavanderia: 2500, ropa: 3500, gym: 6500, proteina: 0, corte: 0 };
+const TEMPLATE_NORMAL = { comida: 40000, salidas: 15000, transporte: 16000, fijosEc: 10000, lavanderia: 5000, ropa: 6000, aseo: 3000, corte: 2500, gym: 2500, proteina: 2500, gustos: 1500 };
+const TEMPLATE_OCT26 = { comida: 18500, salidas: 6500, transporte: 8000, fijosEc: 5000, aseo: 1500, lavanderia: 2500, ropa: 2000, gym: 6500, proteina: 0, corte: 0, gustos: 1500 };
 
 const FUNDS_DEFAULT = {
   instalacion: { name: "Gastos únicos / instalación", short: "Instalación", emoji: "🏠", color: "#7FB5FF", totalCents: 100000,
-    subcats: ["Ropa de invierno", "Térmicas", "Zapatos", "Escritorio", "Mesita y silla", "Plan de celular", "Ropa normal"] },
+    subcats: ["Ropa de invierno", "Térmicas", "Zapatos", "Escritorio", "Mesita y silla", "Hogar básico", "Plan de celular", "Ropa normal"] },
   hermanos: { name: "Viaje con mis hermanos (junio)", short: "Hermanos", emoji: "✈️", color: "#5CE0C8", totalCents: 200000 },
   regalos: { name: "Regalos y PS5", short: "Regalos", emoji: "🎁", color: "#FF8FB8", totalCents: 100000 },
   thanksgiving: { name: "Thanksgiving", short: "Thanksgiving", emoji: "🦃", color: "#F0A35E", totalCents: 100000 },
@@ -123,6 +124,14 @@ function migrate(s) {
     if (fid === "instalacion" && f.subcats && f.subcats[1] === "Termicas") f.subcats = def.subcats.slice();
     f.short = f.short || def.short; f.emoji = f.emoji || def.emoji; f.color = f.color || def.color;
   });
+  Object.entries(b.months).forEach(([mk, m]) => {      // sobre "Gustos": sale de Ropa para que el total no cambie
+    if (m.envelopes.gustos) return;
+    const g = mk === "2026-10" ? 1500 : TEMPLATE_NORMAL.gustos;
+    m.envelopes.gustos = { topeCents: g };
+    const r = m.envelopes.ropa;
+    if (r && r.topeCents === (mk === "2026-10" ? 3500 : 7500)) r.topeCents -= g;
+  });
+  { const f = b.funds.instalacion; if (f && f.subcats && !f.subcats.includes("Hogar básico")) f.subcats.splice(f.subcats.length - 1, 0, "Hogar básico"); }
   b.expenses.forEach(e => { e.paymentMethod = normPay(e.paymentMethod); if (e.paid === undefined) e.paid = false; });
   if (!b.months["2026-10"]) {
     const envelopes = {};
