@@ -75,6 +75,7 @@ async function syncInbox(manual) {
     let n = 0;
     arr.forEach(it => {
       if (!it || !it.id || !it.amountCents || state.budget.inboxSeen[it.id]) return;
+      if (it.date < "2026-10-16") { state.budget.inboxSeen[it.id] = 1; return; }   // antes de que empezara el presupuesto
       const rule = state.budget.rules[merchKey(it.merchant)];
       if (rule) { it.kind = rule.kind; it.targetId = rule.targetId; }
       if (!it.pay && it.card) it.pay = "";
