@@ -132,16 +132,31 @@ INPUTS["split-amt"] = t => {
 CHANGES["split-cat"] = t => { split.parts[+t.dataset.i].key = t.value; paintSplit(); };
 ACTIONS["split-add"] = () => { split.parts.splice(split.parts.length - 1, 0, { str: "", key: "" }); paintSplit(); };
 ACTIONS["split-del"] = d => { split.parts.splice(+d.i, 1); paintSplit(); };
+/* dividir un gasto que ya guardaste (desde Editar gasto) */
+ACTIONS["split-expense"] = d => {
+  const e = exps().find(x => x.id === d.id); if (!e) return;
+  split = { src: "expense", id: e.id, total: e.amountCents, label: `${e.note || catOf(e.kind, e.targetId).short} · ${dayShort(e.date)}`, parts: [{ str: "", key: catKey(e.kind, e.targetId) }, { str: "", key: "" }] };
+  paintSplit();
+};
 ACTIONS["split-save"] = () => {
   if (!split || !splitCalc()) return;
-  const it = inbox().find(x => x.id === split.id); if (!it) return;
+  const fromExp = split.src === "expense";
+  const it = fromExp ? exps().find(x => x.id === split.id) : inbox().find(x => x.id === split.id);
+  if (!it) return;
+  const base = fromExp ? (it.note || catOf(it.kind, it.targetId).short) : (it.note || it.merchant);
   const made = split.parts.map((p, i) => {
     const cents = i === split.parts.length - 1 ? split.rest : parseCents(p.str);
     const [kind, targetId] = p.key.split(":");
-    const e = { id: uid(), amountCents: cents, date: it.date, kind, targetId, paymentMethod: it.pay || "", note: `${it.note || it.merchant} · ${catOf(kind, targetId).short}`, recurringId: null, paid: false, fromInbox: it.id };
-    exps().push(e); return e;
+    const e = { id: uid(), amountCents: cents, date: it.date, kind, targetId, paymentMethod: (fromExp ? it.paymentMethod : it.pay) || "", note: `${base.replace(/ · [^·]+$/, "")} · ${catOf(kind, targetId).short}`, recurringId: null, paid: fromExp ? !!it.paid : false };
+    if (!fromExp) e.fromInbox = it.id;
+    return e;
   });
-  state.budget.inbox = inbox().filter(x => x.id !== it.id);
-  save(); split = null; repaintInbox();
-  toast(`Dividido en ${made.length} gastos`, { action: "Deshacer", fn: () => { const ids = new Set(made.map(e => e.id)); state.budget.expenses = exps().filter(x => !ids.has(x.id)); inbox().push(it); save(); refresh(); } });
+  const at = fromExp ? exps().findIndex(x => x.id === it.id) : -1;
+  if (fromExp) exps().splice(at, 1, ...made); else { made.forEach(e => exps().push(e)); state.budget.inbox = inbox().filter(x => x.id !== it.id); }
+  save(); split = null;
+  if (fromExp) { closeSheet(); refresh(); } else repaintInbox();
+  toast(`Dividido en ${made.length} gastos`, { action: "Deshacer", fn: () => {
+    const ids = new Set(made.map(e => e.id)); state.budget.expenses = exps().filter(x => !ids.has(x.id));
+    if (fromExp) exps().splice(Math.min(at, exps().length), 0, it); else inbox().push(it);
+    save(); refresh(); } });
 };

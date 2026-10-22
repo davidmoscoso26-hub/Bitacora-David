@@ -190,6 +190,7 @@ function openAdd(opts = {}) {
       <label class="field"><span>Nota</span><input class="inp" data-in="note" placeholder="Opcional" value="${esc(draft.note)}" maxlength="80"></label>
     </details>
     <button class="btn" id="saveBtn" data-act="save-expense">Guardar</button>
+    ${draft.editId ? `<button class="btn ghost" data-act="split-expense" data-id="${draft.editId}">✂ Dividir en varios sobres</button>` : ""}
     ${draft.editId ? `<button class="btn danger" data-act="del-expense" data-id="${draft.editId}">Eliminar gasto</button>` : ""}
   `);
   paintAdd();
