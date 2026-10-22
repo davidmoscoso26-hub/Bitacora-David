@@ -1,7 +1,7 @@
 /**
  * Bitácora · lector de correos del banco
- * Lee los avisos "Notificación de Consumos" de Banco Pichincha en tu Gmail y se los
- * entrega a la app como JSON. No guarda nada: cada vez que la app lo pide, revisa el correo.
+ * 1) Lee los avisos "Notificación de Consumos" de Banco Pichincha en tu Gmail y se los entrega a la app.
+ * 2) Guarda una copia de tus datos en tu Google Drive para que celular y web vean lo mismo.
  */
 
 // 1) Cambia esto por una clave larga inventada por ti (solo letras y números).
@@ -23,11 +23,44 @@ const REGLAS = [
   [/SMOKE|TOBACCO|CIGAR|VAPE/i, "envelope", "gustos"],
 ];
 
+const ARCHIVO = "Bitacora-datos.json";          // copia de tus datos en tu Google Drive
+const ARCHIVO_ANTERIOR = "Bitacora-datos-anterior.json";   // versión previa, por si algo sale mal
+
+function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
 function doGet(e) {
-  const ok = e && e.parameter && e.parameter.k === TOKEN;
-  const out = ok ? gastos_() : { error: "clave incorrecta" };
-  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+  if (!(e && e.parameter && e.parameter.k === TOKEN)) return json_({ error: "clave incorrecta" });
+  const a = e.parameter.a;
+  if (a === "rev") { const x = leer_(); return json_({ rev: x.rev || 0, at: x.at || 0 }); }
+  if (a === "state") return json_(leer_());
+  return json_(gastos_());
 }
+
+// Guarda los datos de la app. Si otro dispositivo guardó antes, avisa del conflicto en vez de pisarlo.
+function doPost(e) {
+  if (!(e && e.parameter && e.parameter.k === TOKEN)) return json_({ error: "clave incorrecta" });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    const body = JSON.parse(e.postData.contents);
+    const actual = leer_();
+    if ((actual.rev || 0) !== (body.baseRev || 0)) return json_({ conflict: true, remote: actual });
+    if (actual.data) archivo_(ARCHIVO_ANTERIOR).setContent(JSON.stringify(actual));
+    const nuevo = { rev: (actual.rev || 0) + 1, at: Date.now(), data: body.data };
+    archivo_(ARCHIVO).setContent(JSON.stringify(nuevo));
+    return json_({ ok: true, rev: nuevo.rev, at: nuevo.at });
+  } finally { lock.releaseLock(); }
+}
+
+function archivo_(nombre) {
+  const it = DriveApp.getFilesByName(nombre);
+  return it.hasNext() ? it.next() : DriveApp.createFile(nombre, '{"rev":0}', "application/json");
+}
+function leer_() {
+  try { return JSON.parse(archivo_(ARCHIVO).getBlob().getDataAsString()) || { rev: 0 }; } catch (err) { return { rev: 0 }; }
+}
+// Ejecútala UNA vez desde el editor para darle permiso de Drive.
+function autorizar() { archivo_(ARCHIVO); Logger.log("Listo: permiso de Drive concedido"); }
 
 function gastos_() {
   const cache = CacheService.getScriptCache();

@@ -147,13 +147,13 @@ function migrate(s) {
   }
   b.recurringDone["rec-renta:2026-10"] = true; // octubre ya está pagado
 
-  s.settings = Object.assign({ theme: "auto", carryOver: false, lastPayment: "", inboxUrl: "", lastSync: 0, lastSyncMsg: "" }, s.settings || {});
+  s.settings = Object.assign({ theme: "auto", carryOver: false, lastPayment: "", inboxUrl: "" }, s.settings || {});
   s.version = 2;
   return s;
 }
 
 let state = migrate(loadRaw());
-function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn("No se pudo guardar", e); } }
+function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { console.warn("No se pudo guardar", e); } if (typeof cloudDirty === "function") cloudDirty(); }
 save();
 
 function catOf(kind, id) {

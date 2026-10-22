@@ -64,9 +64,9 @@ ACTIONS["edit-inbox"] = d => openAdd({ inboxId: d.id });
 let syncing = false;
 async function syncInbox(manual) {
   const url = (state.settings.inboxUrl || "").trim();
-  if (syncing) return;
+  if (!url || syncing) return;
   syncing = true;
-  const stamp = msg => { state.settings.lastSync = Date.now(); state.settings.lastSyncMsg = msg; save(); };
+  const stamp = msg => { cs.lastSync = Date.now(); cs.lastSyncMsg = msg; saveCS(); };
   try {
     const r = await fetch(url || "/inbox.json?t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
@@ -89,7 +89,7 @@ async function syncInbox(manual) {
     if (url) { stamp("error: " + e.message); if (manual) { render(); toast("No pude leer el correo. Revisa el link.", { tone: "warn" }); } }
   } finally { syncing = false; }
 }
-ACTIONS["inbox-sync-now"] = () => syncInbox(true);
+ACTIONS["inbox-sync-now"] = () => syncAll(true);
 
 /* ===================== dividir un cobro ===================== */
 let split = null;
