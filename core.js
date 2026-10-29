@@ -51,6 +51,7 @@ const ENVELOPES = [
   { id: "gustos", name: "Gustos personales", short: "Gustos", emoji: "✨", color: "#D9A066" },
 ];
 const ENV = Object.fromEntries(ENVELOPES.map(e => [e.id, e]));
+const REIMB = { id: "reembolsable", name: "Reembolsable por la empresa", short: "Reembolsable", emoji: "🔄", color: "#9AA7B8" };
 const FIXED = { id: "renta", name: "Renta", short: "Renta", emoji: "🔑", color: "#A8B3C7" };
 
 // montos en centavos
@@ -158,6 +159,7 @@ save();
 
 function catOf(kind, id) {
   if (kind === "envelope") return ENV[id] || { name: id, short: id, emoji: "•", color: "#999" };
+  if (kind === "reimb") return REIMB;
   if (kind === "fund") { const f = state.budget.funds[id]; return f ? { name: f.name, short: f.short || f.name, emoji: f.emoji, color: f.color } : { name: id, short: id, emoji: "•", color: "#999" }; }
   return FIXED;
 }

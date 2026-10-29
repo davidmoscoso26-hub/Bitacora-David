@@ -63,6 +63,7 @@ function viewHome() {
   ${inboxBanner()}
   ${sug.map((s, i) => `<div class="alert"><span style="font-size:22px">⚠️</span><p><b>${esc(ENV[s.to].short)}</b> se pasó ${money(s.need)}. <b>${esc(ENV[s.from].short)}</b> tiene holgura.</p>
     <button class="btn-s" data-act="do-suggest" data-i="${i}">Mover ${moneyR(s.cents)}</button></div>`).join("")}
+  ${reimbBanner()}
   ${unpaidTotal > 0 ? `<button class="cardbal" data-act="open-card"><span class="ico">💳</span><div><b>Debes ${money(unpaidTotal)} en la tarjeta</b><span>${unpaid.length} ${unpaid.length === 1 ? "gasto" : "gastos"} sin pagar · toca para marcarlos</span></div><span class="chev muted">›</span></button>` : ""}
   <section class="sec"><div class="sec-h"><h2 class="display">Sobres del mes</h2><span>toca uno para ver el detalle</span></div><div class="grid2">${tiles}</div></section>
   <section class="sec"><div class="sec-h"><h2 class="display">Fondos del viaje</h2><span>no se reinician</span></div>${funds}</section>`;
@@ -129,7 +130,7 @@ let sumMk = null;
 
 function byCategory(mk) {
   const map = {};
-  exps().forEach(e => { if (!inMonth(e, mk) || e.kind === "fixed") return; const k = e.kind + ":" + e.targetId; map[k] = (map[k] || 0) + e.amountCents; });
+  exps().forEach(e => { if (!inMonth(e, mk) || e.kind === "fixed" || e.kind === "reimb") return; const k = e.kind + ":" + e.targetId; map[k] = (map[k] || 0) + e.amountCents; });
   return Object.entries(map).map(([k, cents]) => { const [kind, id] = k.split(":"); return { kind, id, cents, ...catOf(kind, id) }; }).sort((a, b) => b.cents - a.cents);
 }
 function insightsFor(mk, T, cats) {
@@ -182,7 +183,7 @@ function viewSummary() {
   const pctSpent = T.tope > 0 ? Math.min(100, T.spent / T.tope * 100) : 0;
   const elapsed = Math.max(1, isCur ? p.idx : p.total);
   const envExp = exps().filter(e => e.kind === "envelope" && inMonth(e, mk)).sort((a, b) => b.amountCents - a.amountCents);
-  const top = exps().filter(e => inMonth(e, mk) && e.kind !== "fixed").sort((a, b) => b.amountCents - a.amountCents).slice(0, 5);
+  const top = exps().filter(e => inMonth(e, mk) && e.kind !== "fixed" && e.kind !== "reimb").sort((a, b) => b.amountCents - a.amountCents).slice(0, 5);
   const rent = exps().filter(e => e.kind === "fixed" && inMonth(e, mk)).reduce((s, e) => s + e.amountCents, 0);
   const funds = Object.entries(state.budget.funds).map(([fid, f]) => ({ fid, f, sp: fundSpent(fid) }));
 
@@ -233,7 +234,7 @@ function exportCSV(mk) {
   const rows = [["Fecha", "Tipo", "Categoría", "Monto", "Método de pago", "Nota", "Tarjeta pagada"]];
   sortExp(exps().filter(e => !mk || inMonth(e, mk))).reverse().forEach(e => {
     const c = catOf(e.kind, e.targetId);
-    rows.push([e.date, e.kind === "envelope" ? "Sobre" : e.kind === "fund" ? "Fondo" : "Fijo", c.name, (e.amountCents / 100).toFixed(2), e.paymentMethod, e.note, e.paymentMethod === CARD ? (e.paid ? "Sí" : "No") : ""]);
+    rows.push([e.date, e.kind === "envelope" ? "Sobre" : e.kind === "fund" ? "Fondo" : e.kind === "reimb" ? (e.reimbursedOn ? "Reembolsado" : "Reembolsable") : "Fijo", c.name, (e.amountCents / 100).toFixed(2), e.paymentMethod, e.note, e.paymentMethod === CARD ? (e.paid ? "Sí" : "No") : ""]);
   });
   download(`bitacora-gastos-${mk || "todo"}.csv`, "﻿" + rows.map(r => r.map(csvEscape).join(",")).join("\n"), "text/csv;charset=utf-8");
 }

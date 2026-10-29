@@ -153,12 +153,13 @@ function chipList() {
     env: ENVELOPES.map(e => ({ kind: "envelope", id: e.id, ...e })),
     fund: Object.entries(state.budget.funds).map(([id, f]) => ({ kind: "fund", id, name: f.name, short: f.short, emoji: f.emoji, color: f.color })),
     fix: [{ kind: "fixed", id: "renta", ...FIXED }],
+    reimb: [{ kind: "reimb", ...REIMB }],
   };
 }
 function frequent() {
   const cut = new Date(); cut.setDate(cut.getDate() - 45);
   const cutS = fmtDate(cut), cnt = {};
-  exps().forEach(e => { if (e.date >= cutS && e.kind !== "fixed") { const k = e.kind + ":" + e.targetId; cnt[k] = (cnt[k] || 0) + 1; } });
+  exps().forEach(e => { if (e.date >= cutS && e.kind !== "fixed" && e.kind !== "reimb") { const k = e.kind + ":" + e.targetId; cnt[k] = (cnt[k] || 0) + 1; } });
   return Object.entries(cnt).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k]) => { const [kind, id] = k.split(":"); return { kind, id, ...catOf(kind, id) }; });
 }
 const chipHTML = c => `<button class="chip" style="--c:${c.color}" aria-pressed="${!!draft && draft.kind === c.kind && draft.targetId === c.id}" data-act="pick-cat" data-kind="${c.kind}" data-id="${c.id}"><span>${c.emoji}</span>${esc(c.short)}</button>`;
@@ -182,6 +183,7 @@ function openAdd(opts = {}) {
     <p class="lbl">Sobres del mes</p><div class="chips" id="chEnv">${L.env.map(chipHTML).join("")}</div>
     <p class="lbl">Fondos del viaje</p><div class="chips" id="chFund">${L.fund.map(chipHTML).join("")}</div>
     <p class="lbl">Fijo</p><div class="chips" id="chFix">${L.fix.map(chipHTML).join("")}</div>
+    <p class="lbl">Fuera del presupuesto</p><div class="chips" id="chReimb">${L.reimb.map(chipHTML).join("")}</div>
     <div id="subBox"></div>
     <p class="lbl">Pagado con</p>
     <div class="segs" id="pays">${PAYMENTS.map(p => `<button class="seg-b" data-act="pick-pay" data-id="${esc(p.id)}" aria-pressed="${draft.pay === p.id}"><span>${p.emoji}</span>${p.short}</button>`).join("")}</div>
@@ -453,3 +455,30 @@ ACTIONS["r-del"] = d => {
   toast("Recurrente eliminado", { action: "Deshacer", fn: () => { state.budget.recurring.splice(Math.min(i, state.budget.recurring.length), 0, r); save(); refresh(); } });
 };
 ACTIONS["r-toggle"] = d => { const r = state.budget.recurring.find(x => x.id === d.id); r.active = !r.active; save(); refresh(); };
+
+/* ===================== reembolsables (la empresa te devuelve) ===================== */
+const reimbDue = () => exps().filter(e => e.kind === "reimb" && !e.reimbursedOn);
+function reimbBanner() {
+  const L = reimbDue(); if (!L.length) return "";
+  const tot = L.reduce((s, e) => s + e.amountCents, 0);
+  return `<button class="cardbal" data-act="open-reimb"><span class="ico">🔄</span><div><b>${money(tot)} por reembolsar</b><span>${L.length} ${L.length === 1 ? "gasto" : "gastos"} que te devuelve la empresa · no cuentan en tu presupuesto</span></div><span class="chev muted">›</span></button>`;
+}
+function reimbSheetHTML() {
+  const L = reimbDue().sort((a, b) => a.date.localeCompare(b.date));
+  const done = exps().filter(e => e.kind === "reimb" && e.reimbursedOn).length;
+  return `<div class="sheet-h"><h3>Por reembolsar</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>
+    <p class="hint" style="margin:4px 0 12px">Estos gastos salieron de tu tarjeta pero no cuentan en tu presupuesto. Cuando te los devuelvan, márcalos. Si al final no te los pagan, toca el gasto y muévelo a un sobre.</p>
+    <div class="list">${L.map(e => `<div class="row" style="--c:${REIMB.color}">
+      <button class="row-b" style="display:flex;align-items:center;gap:12px;text-align:left" data-act="edit-expense" data-id="${e.id}"><span class="ico">${REIMB.emoji}</span><span class="row-b"><b>${esc(e.note || "Reembolsable")}</b><span>${dayShort(e.date)}</span></span></button>
+      <span class="row-r">${money(e.amountCents)}</span>
+      <button class="btn-s" data-act="reimb-done" data-id="${e.id}">Ya llegó</button></div>`).join("") || `<div class="empty"><b>✓</b>Nada pendiente.</div>`}</div>
+    ${done ? `<p class="hint" style="margin-top:12px">${done} ya ${done === 1 ? "reembolsado" : "reembolsados"} (siguen en el historial).</p>` : ""}`;
+}
+ACTIONS["open-reimb"] = () => openSheet(reimbSheetHTML());
+ACTIONS["reimb-done"] = d => {
+  const e = exps().find(x => x.id === d.id); if (!e) return;
+  e.reimbursedOn = todayKey(); save();
+  if (reimbDue().length) openSheet(reimbSheetHTML()); else closeSheet();
+  refresh();
+  toast(`${money(e.amountCents)} reembolsado`, { action: "Deshacer", fn: () => { delete e.reimbursedOn; save(); refresh(); } });
+};
