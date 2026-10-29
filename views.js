@@ -60,6 +60,7 @@ function viewHome() {
     <p class="legend-note">El anillo se colorea según en qué gastaste. La marca blanca es dónde deberías ir hoy.</p>
   </section>
   ${rent ? `<p class="hint" style="margin:10px 4px 0;text-align:center">🔑 Renta del mes ${money(rent)} · va aparte, fuera de los sobres</p>` : ""}
+  ${closeBanner()}
   ${inboxBanner()}
   ${sug.map((s, i) => `<div class="alert"><span style="font-size:22px">⚠️</span><p><b>${esc(ENV[s.to].short)}</b> se pasó ${money(s.need)}. <b>${esc(ENV[s.from].short)}</b> tiene holgura.</p>
     <button class="btn-s" data-act="do-suggest" data-i="${i}">Mover ${moneyR(s.cents)}</button></div>`).join("")}
@@ -222,6 +223,7 @@ function viewSummary() {
   ${prevT ? `<section class="card"><h3 class="display">Contra el mes pasado</h3>
     <div class="row-b" style="margin-bottom:12px"><span class="mono" style="font-size:13px">${money(prevT.spent)} → ${money(T.spent)}</span> <span class="chg ${T.spent <= prevT.spent ? "down" : "up"}">${T.spent <= prevT.spent ? "▼" : "▲"} ${money(Math.abs(T.spent - prevT.spent))}</span></div>
     <div class="list">${cmp.map(x => `<div class="prog-row"><span>${x.e.emoji} ${esc(x.e.short)}</span><span class="chg ${x.d <= 0 ? "down" : "up"}">${x.d <= 0 ? "▼" : "▲"} ${moneyR(Math.abs(x.d))}</span></div>`).join("")}</div></section>` : ""}
+  ${savingsCard()}
   <section class="card"><h3 class="display">Fondos del viaje</h3><div class="bvr">${funds.map(({ f, sp }) => `<div class="bvr-row" style="--c:${f.color}"><div class="bvr-h"><b>${f.emoji} ${esc(f.short)}</b><span class="mono">${moneyR(sp)} / ${moneyR(f.totalCents)}</span></div><div class="bar"><i style="width:${f.totalCents > 0 ? Math.min(100, sp / f.totalCents * 100) : 0}%"></i></div></div>`).join("")}</div></section>
   <div class="btn-row" style="margin-top:14px"><button class="btn ghost" data-act="csv-month">⬇ CSV de este mes</button><button class="btn ghost" data-act="csv-all">⬇ CSV de todo</button></div>`;
 }

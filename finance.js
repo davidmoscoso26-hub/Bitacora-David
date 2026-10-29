@@ -25,13 +25,9 @@ function spentEnv(mk, id) {
   exps().forEach(e => { if (e.kind === "envelope" && e.targetId === id && inMonth(e, mk)) s += e.amountCents; });
   return s;
 }
-function carryIn(mk, id, depth = 0) {
-  if (!state.settings.carryOver || depth > 12) return 0;
-  const pm = state.budget.months[prevMk(mk)];
-  if (!pm) return 0;
-  const p = prevMk(mk);
-  const left = ((pm.envelopes[id] || {}).topeCents || 0) + transferNet(p, id) + carryIn(p, id, depth + 1) - spentEnv(p, id);
-  return Math.max(0, left);
+function carryIn(mk, id) {   // lo que "se quedó" del cierre del mes anterior
+  const c = state.budget.closes[prevMk(mk)], it = c && c.items[id];
+  return it && it.mode === "keep" ? Math.max(0, it.leftCents) : 0;
 }
 function baseTope(mk, id) { const m = getMonth(mk); return (m.envelopes[id] || {}).topeCents || 0; }
 function effTope(mk, id) { return baseTope(mk, id) + transferNet(mk, id) + carryIn(mk, id); }

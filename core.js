@@ -119,6 +119,7 @@ function migrate(s) {
   b.transfers = b.transfers || [];
   b.recurringDone = b.recurringDone || {};
   b.inbox = b.inbox || []; b.inboxSeen = b.inboxSeen || {}; b.rules = b.rules || {};
+  b.closes = b.closes || {}; b.envMode = b.envMode || {}; b.savingsMoves = b.savingsMoves || [];
   Object.entries(FUNDS_DEFAULT).forEach(([fid, def]) => {
     const f = b.funds[fid] = b.funds[fid] || clone(def);
     if (f.name === OLD_FUND_NAMES[fid]) f.name = def.name;

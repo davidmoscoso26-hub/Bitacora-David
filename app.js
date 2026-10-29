@@ -49,8 +49,7 @@ function viewMore() {
     <p class="lbl" style="margin-top:0">Apariencia</p>
     <div class="segs">${[["auto", "Automático"], ["dark", "Oscuro"], ["light", "Claro"]].map(([v, l]) => `<button class="seg-b" data-act="set-theme" data-v="${v}" aria-pressed="${th === v}">${l}</button>`).join("")}</div>
     <div class="divider"></div>
-    <div class="switch-row"><div><b>Acumular lo que sobra</b><span>El sobrante de cada sobre pasa al mes siguiente</span></div>
-      <button class="sw" data-act="toggle-carry" aria-pressed="${state.settings.carryOver}" aria-label="Acumular sobrante"></button></div>
+    <button class="menu" style="margin:0" data-act="open-prefs"><span class="ico" style="--c:#5BE16B">🧾</span><div><b>Lo que sobra al cerrar el mes</b><span>Qué hace cada sobre: se queda, ahorros o se deja ir</span></div><span class="chev">›</span></button>
   </div>
   <div class="card"><h3 class="display">Correo y nube</h3>
     <p class="hint" style="margin-bottom:10px">Pega el link de tu Apps Script. Trae los consumos de tu tarjeta a "Por clasificar" y guarda una copia de tus datos en tu Google Drive para ver lo mismo en celular y web.</p>
@@ -65,7 +64,6 @@ function viewMore() {
 }
 INPUTS["inbox-url"] = t => { state.settings.inboxUrl = t.value.trim(); save(); };
 ACTIONS["set-theme"] = d => { state.settings.theme = d.v; save(); applyTheme(); refresh(); };
-ACTIONS["toggle-carry"] = () => { state.settings.carryOver = !state.settings.carryOver; save(); refresh(); };
 
 /* --- respaldo --- */
 ACTIONS["backup-export"] = () => { download(`bitacora-respaldo-${todayKey()}.json`, JSON.stringify(state, null, 1), "application/json"); toast("Respaldo descargado"); };

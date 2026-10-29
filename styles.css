@@ -344,3 +344,4 @@ details.more summary::-webkit-details-marker { display: none; }
 .row .ico, .menu .ico { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 13px; font-size: 21px; line-height: 1;
   background: color-mix(in srgb, var(--c, #888) 20%, var(--surface-2)); }
 .sheet .btn[data-act="accept-all"] { position: sticky; bottom: 8px; }
+.sheet .btn[data-act="cl-confirm"] { position: sticky; bottom: 8px; }
