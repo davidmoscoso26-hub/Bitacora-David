@@ -234,10 +234,10 @@ ACTIONS["sum-next"] = () => { const l = monthsWithData().slice().reverse(), i = 
 /* ===================== exportar CSV ===================== */
 function csvEscape(v) { v = String(v ?? ""); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; }
 function exportCSV(mk) {
-  const rows = [["Fecha", "Tipo", "Categoría", "Monto", "Método de pago", "Nota", "Tarjeta pagada"]];
+  const rows = [["Fecha", "Tipo", "Categoría", "Monto", "Método de pago", "Nota", "Tarjeta pagada", "Detalle"]];
   sortExp(exps().filter(e => !mk || inMonth(e, mk))).reverse().forEach(e => {
     const c = catOf(e.kind, e.targetId);
-    rows.push([e.date, e.kind === "envelope" ? "Sobre" : e.kind === "fund" ? "Fondo" : e.kind === "reimb" ? (e.reimbursedOn ? "Reembolsado" : "Reembolsable") : "Fijo", c.name, (e.amountCents / 100).toFixed(2), e.paymentMethod, e.note, e.paymentMethod === CARD ? (e.paid ? "Sí" : "No") : ""]);
+    rows.push([e.date, e.kind === "envelope" ? "Sobre" : e.kind === "fund" ? "Fondo" : e.kind === "reimb" ? (e.reimbursedOn ? "Reembolsado" : "Reembolsable") : "Fijo", c.name, (e.amountCents / 100).toFixed(2), e.paymentMethod, e.note, e.paymentMethod === CARD ? (e.paid ? "Sí" : "No") : "", (e.detail || "").replace(/\n/g, " | ")]);
   });
   download(`bitacora-gastos-${mk || "todo"}.csv`, "﻿" + rows.map(r => r.map(csvEscape).join(",")).join("\n"), "text/csv;charset=utf-8");
 }
