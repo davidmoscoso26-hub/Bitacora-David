@@ -163,13 +163,13 @@ const chipHTML = c => `<button class="chip" style="--c:${c.color}" aria-pressed=
 function openAdd(opts = {}) {
   const ib = opts.inboxId ? inbox().find(x => x.id === opts.inboxId) : null;
   if (ib) {
-    draft = { editId: null, inboxId: ib.id, str: (ib.amountCents / 100).toFixed(2), kind: ib.kind, targetId: ib.targetId, date: ib.date, pay: ib.pay || "", note: ib.note || ib.merchant || "" };
+    draft = { editId: null, inboxId: ib.id, str: (ib.amountCents / 100).toFixed(2), kind: ib.kind, targetId: ib.targetId, date: ib.date, pay: ib.pay || "", note: ib.note || ib.merchant || "", detail: "" };
   } else if (opts.editId) {
     const e = exps().find(x => x.id === opts.editId);
     if (!e) return;
-    draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "" };
+    draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "", detail: e.detail || "" };
   } else {
-    draft = { editId: null, str: "", kind: opts.kind || null, targetId: opts.targetId || null, date: todayKey(), pay: state.settings.lastPayment || "", note: "" };
+    draft = { editId: null, str: "", kind: opts.kind || null, targetId: opts.targetId || null, date: todayKey(), pay: state.settings.lastPayment || "", note: "", detail: "" };
   }
   const L = chipList(), fq = frequent();
   openSheet(`
@@ -183,9 +183,10 @@ function openAdd(opts = {}) {
     <div id="subBox"></div>
     <p class="lbl">Pagado con</p>
     <div class="segs" id="pays">${PAYMENTS.map(p => `<button class="seg-b" data-act="pick-pay" data-id="${esc(p.id)}" aria-pressed="${draft.pay === p.id}"><span>${p.emoji}</span>${p.short}</button>`).join("")}</div>
-    <details class="more" ${draft.editId || draft.note ? "open" : ""}><summary>Fecha y nota</summary>
+    <details class="more" ${draft.editId || draft.note || draft.detail ? "open" : ""}><summary>Fecha y nota</summary>
       <label class="field"><span>Fecha</span><input class="inp" type="date" data-in="date" value="${draft.date}"></label>
       <label class="field"><span>Nota</span><input class="inp" data-in="note" placeholder="Opcional" value="${esc(draft.note)}" maxlength="80"></label>
+      <label class="field"><span>Detalle de la compra (qué llevaste, precios…)</span><textarea class="inp" data-in="detail" rows="4" placeholder="Opcional. Ej: pantalón 29.99, buzo 24.99…" style="resize:vertical;min-height:90px;font-family:inherit">${esc(draft.detail || "")}</textarea></label>
     </details>
     <button class="btn" id="saveBtn" data-act="save-expense">Guardar</button>
     ${draft.editId ? `<button class="btn ghost" data-act="split-expense" data-id="${draft.editId}">✂ Dividir en varios sobres</button>` : ""}
@@ -213,6 +214,7 @@ function paintAdd() {
 INPUTS.amt = t => { draft.str = t.value; paintAdd(); };
 INPUTS.date = t => { draft.date = t.value; };
 INPUTS.note = t => { draft.note = t.value; };
+INPUTS.detail = t => { draft.detail = t.value; };
 ACTIONS["open-add"] = d => openAdd({ kind: d.kind, targetId: d.id });
 ACTIONS["edit-expense"] = d => openAdd({ editId: d.id });
 ACTIONS["pick-cat"] = d => { draft.kind = d.kind; draft.targetId = d.id; paintAdd(); };
@@ -229,11 +231,13 @@ ACTIONS["save-expense"] = () => {
     const e = exps().find(x => x.id === draft.editId);
     const before = clone(e);
     Object.assign(e, { amountCents: cents, date, kind: draft.kind, targetId: draft.targetId, paymentMethod: draft.pay, note: draft.note.trim() });
+    if ((draft.detail || "").trim()) e.detail = draft.detail.trim(); else delete e.detail;
     if (before.paymentMethod !== CARD && e.paymentMethod === CARD) e.paid = false;
     save(); closeSheet(); refresh();
     toast("Gasto actualizado", { action: "Deshacer", fn: () => { Object.assign(e, before); save(); refresh(); } });
   } else {
     const e = { id: uid(), amountCents: cents, date, kind: draft.kind, targetId: draft.targetId, paymentMethod: draft.pay, note: draft.note.trim(), recurringId: null, paid: false };
+    if ((draft.detail || "").trim()) e.detail = draft.detail.trim();
     exps().push(e);
     const ibItem = draft.inboxId ? inbox().find(x => x.id === draft.inboxId) : null;
     if (ibItem) { learn(ibItem, draft.kind, draft.targetId); state.budget.inbox = inbox().filter(x => x.id !== ibItem.id); e.fromInbox = ibItem.id; }
@@ -263,7 +267,7 @@ ACTIONS["del-expense"] = d => {
 /* ===================== detalle de sobre ===================== */
 function expRow(e) {
   const c = catOf(e.kind, e.targetId);
-  const meta = [dayLabel(e.date), e.paymentMethod ? PAYMENTS.find(p => p.id === e.paymentMethod)?.short : "", e.note].filter(Boolean).join(" · ");
+  const meta = [dayLabel(e.date), e.paymentMethod ? PAYMENTS.find(p => p.id === e.paymentMethod)?.short : "", e.note, e.detail ? "🧾" : ""].filter(Boolean).join(" · ");
   const unpaid = e.paymentMethod === CARD && !e.paid;
   return `<button class="row" style="--c:${c.color}" data-act="edit-expense" data-id="${e.id}">
     <span class="ico">${c.emoji}</span>

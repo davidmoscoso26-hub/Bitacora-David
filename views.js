@@ -225,7 +225,8 @@ function viewSummary() {
     <div class="list">${cmp.map(x => `<div class="prog-row"><span>${x.e.emoji} ${esc(x.e.short)}</span><span class="chg ${x.d <= 0 ? "down" : "up"}">${x.d <= 0 ? "▼" : "▲"} ${moneyR(Math.abs(x.d))}</span></div>`).join("")}</div></section>` : ""}
   ${savingsCard()}
   <section class="card"><h3 class="display">Fondos del viaje</h3><div class="bvr">${funds.map(({ f, sp }) => `<div class="bvr-row" style="--c:${f.color}"><div class="bvr-h"><b>${f.emoji} ${esc(f.short)}</b><span class="mono">${moneyR(sp)} / ${moneyR(f.totalCents)}</span></div><div class="bar"><i style="width:${f.totalCents > 0 ? Math.min(100, sp / f.totalCents * 100) : 0}%"></i></div></div>`).join("")}</div></section>
-  <div class="btn-row" style="margin-top:14px"><button class="btn ghost" data-act="csv-month">⬇ CSV de este mes</button><button class="btn ghost" data-act="csv-all">⬇ CSV de todo</button></div>`;
+  <div class="btn-row" style="margin-top:14px"><button class="btn ghost" data-act="csv-month">⬇ CSV de este mes</button><button class="btn ghost" data-act="csv-all">⬇ CSV de todo</button></div>
+  <button class="btn" style="margin-top:10px" data-act="copy-analysis">⧉ Copiar mes para análisis</button>`;
 }
 ACTIONS["sum-prev"] = () => { const l = monthsWithData().slice().reverse(), i = l.indexOf(sumMk); if (i > 0) { sumMk = l[i - 1]; refresh(); } };
 ACTIONS["sum-next"] = () => { const l = monthsWithData().slice().reverse(), i = l.indexOf(sumMk); if (i < l.length - 1) { sumMk = l[i + 1]; refresh(); } };
@@ -248,3 +249,31 @@ function download(name, text, type) {
 }
 ACTIONS["csv-month"] = () => { exportCSV(sumMk || mkOf(new Date())); toast("CSV descargado"); };
 ACTIONS["csv-all"] = () => { exportCSV(null); toast("CSV descargado"); };
+
+/* ===================== texto para análisis (pegar en un chat) ===================== */
+function analysisText(mk) {
+  const L = [], $m = c => money(c);
+  L.push(`# Gastos de ${MONTHS[+mk.slice(5) - 1]} ${mk.slice(0, 4)} (Bitácora)`);
+  const first = sortExp(exps().filter(e => inMonth(e, mk))).slice(-1)[0];
+  if (first && mk === "2026-10") L.push("Nota: octubre es parcial, del 16 al 31 (llegué a NJ el 16).");
+  L.push("", "## Sobres: presupuesto vs real");
+  ENVELOPES.forEach(en => {
+    const t = effTope(mk, en.id), sp = spentEnv(mk, en.id);
+    if (t || sp) L.push(`- ${en.short}: gastado ${$m(sp)} de ${$m(t)} (${t - sp >= 0 ? "sobran " + $m(t - sp) : "pasé " + $m(sp - t)})`);
+  });
+  L.push("", "## Fondos (compras únicas del viaje)");
+  Object.entries(state.budget.funds).forEach(([fid, f]) => { const sp = fundSpent(fid); if (sp) L.push(`- ${f.short}: gastado ${$m(sp)} en total de ${$m(f.totalCents)}`); });
+  L.push("", "## Gastos uno por uno (fecha · categoría · monto · pago · nota)");
+  sortExp(exps().filter(e => inMonth(e, mk))).reverse().forEach(e => {
+    const c = catOf(e.kind, e.targetId);
+    const tag = e.kind === "reimb" ? " [REEMBOLSABLE" + (e.reimbursedOn ? ", ya llegó" : "") + "]" : "";
+    L.push(`- ${e.date} · ${c.short} · ${$m(e.amountCents)} · ${e.paymentMethod || "—"}${e.note ? " · " + e.note : ""}${tag}`);
+    if (e.detail) e.detail.split("\n").forEach(x => { if (x.trim()) L.push("    · " + x.trim()); });
+  });
+  return L.join("\n");
+}
+ACTIONS["copy-analysis"] = async () => {
+  const txt = analysisText(sumMk || mkOf(new Date()));
+  try { await navigator.clipboard.writeText(txt); toast("Copiado. Pégalo en tu chat de presupuestos"); }
+  catch { download(`bitacora-analisis-${sumMk || "mes"}.txt`, txt, "text/plain;charset=utf-8"); toast("No pude copiar; descargué un .txt"); }
+};
