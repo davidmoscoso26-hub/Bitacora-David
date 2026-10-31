@@ -149,7 +149,7 @@ function chipList() {
     env: ENVELOPES.map(e => ({ kind: "envelope", id: e.id, ...e })),
     fund: Object.entries(state.budget.funds).map(([id, f]) => ({ kind: "fund", id, name: f.name, short: f.short, emoji: f.emoji, color: f.color })),
     fix: [{ kind: "fixed", id: "renta", ...FIXED }],
-    reimb: [{ kind: "reimb", ...REIMB }],
+    reimb: REIMB_GROUPS.map(g => ({ kind: "reimb", id: g.id, name: g.name, short: g.short, emoji: g.emoji, color: g.color })),
   };
 }
 function frequent() {
@@ -167,7 +167,7 @@ function openAdd(opts = {}) {
   } else if (opts.editId) {
     const e = exps().find(x => x.id === opts.editId);
     if (!e) return;
-    draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "", detail: e.detail || "" };
+    draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.kind === "reimb" ? reimbG(e.targetId).id : e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "", detail: e.detail || "" };
   } else {
     draft = { editId: null, str: "", kind: opts.kind || null, targetId: opts.targetId || null, date: todayKey(), pay: state.settings.lastPayment || "", note: "", detail: "" };
   }
@@ -457,28 +457,63 @@ ACTIONS["r-del"] = d => {
 ACTIONS["r-toggle"] = d => { const r = state.budget.recurring.find(x => x.id === d.id); r.active = !r.active; save(); refresh(); };
 
 /* ===================== reembolsables (la empresa te devuelve) ===================== */
-const reimbDue = () => exps().filter(e => e.kind === "reimb" && !e.reimbursedOn);
-function reimbBanner() {
-  const L = reimbDue(); if (!L.length) return "";
-  const tot = L.reduce((s, e) => s + e.amountCents, 0);
-  return `<button class="cardbal" data-act="open-reimb"><span class="ico">🔄</span><div><b>${money(tot)} por reembolsar</b><span>${L.length} ${L.length === 1 ? "gasto" : "gastos"} que te devuelve la empresa · no cuentan en tu presupuesto</span></div><span class="chev muted">›</span></button>`;
+const reimbDue = g => exps().filter(e => e.kind === "reimb" && !e.reimbursedOn && (!g || reimbG(e.targetId).id === g));
+// sección al fondo del inicio: una tarjeta por bolsa con algo pendiente
+function reimbSection() {
+  const cards = REIMB_GROUPS.map(g => {
+    const L = reimbDue(g.id); if (!L.length) return "";
+    const tot = L.reduce((s, e) => s + e.amountCents, 0);
+    return `<button class="cardbal" style="--c:${g.color}" data-act="open-reimb" data-g="${g.id}"><span class="ico">${g.emoji}</span><div><b>${money(tot)} · ${esc(g.title)}</b><span>${L.length} ${L.length === 1 ? "gasto" : "gastos"} · ${esc(g.hint)}</span></div><span class="chev muted">›</span></button>`;
+  }).join("");
+  return cards ? `<section class="sec"><div class="sec-h"><h2 class="display">Fuera del presupuesto</h2><span>te los devuelven</span></div>${cards}</section>` : "";
 }
-function reimbSheetHTML() {
-  const L = reimbDue().sort((a, b) => a.date.localeCompare(b.date));
-  const done = exps().filter(e => e.kind === "reimb" && e.reimbursedOn).length;
-  return `<div class="sheet-h"><h3>Por reembolsar</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>
-    <p class="hint" style="margin:4px 0 12px">Estos gastos salieron de tu tarjeta pero no cuentan en tu presupuesto. Cuando te los devuelvan, márcalos. Si al final no te los pagan, toca el gasto y muévelo a un sobre.</p>
-    <div class="list">${L.map(e => `<div class="row" style="--c:${REIMB.color}">
-      <button class="row-b" style="display:flex;align-items:center;gap:12px;text-align:left" data-act="edit-expense" data-id="${e.id}"><span class="ico">${REIMB.emoji}</span><span class="row-b"><b>${esc(e.note || "Reembolsable")}</b><span>${dayShort(e.date)}</span></span></button>
+const usDate = d => d.slice(5, 7) + "/" + d.slice(8, 10) + "/" + d.slice(0, 4);
+function reimbReport(g) {
+  const L = reimbDue(g).sort((a, b) => a.date.localeCompare(b.date));
+  const tot = L.reduce((s, e) => s + e.amountCents, 0), G = reimbG(g);
+  return [`Expense reimbursement request - ${G.id === "trabajo" ? "work travel (transit)" : G.title}`,
+    `Employee: David`,
+    L.length ? `Period: ${usDate(L[0].date)} to ${usDate(L[L.length - 1].date)}` : "",
+    "", "Date | Description | Amount",
+    ...L.map(e => `${usDate(e.date)} | ${e.note || "Transit fare"} | ${money(e.amountCents)}`),
+    "", `Total: ${money(tot)}`].filter((x, i) => x !== "" || i > 2).join("\n");
+}
+function reimbSheetHTML(g) {
+  const G = reimbG(g), L = reimbDue(g).sort((a, b) => a.date.localeCompare(b.date));
+  const tot = L.reduce((s, e) => s + e.amountCents, 0);
+  const done = exps().filter(e => e.kind === "reimb" && e.reimbursedOn && reimbG(e.targetId).id === G.id).length;
+  return `<div class="sheet-h"><h3>${G.emoji} ${esc(G.title)}</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>
+    <p class="hint" style="margin:4px 0 12px">Salieron de tu tarjeta pero no cuentan en tu presupuesto; ${esc(G.hint)}. Si al final no te los pagan, toca el gasto y muévelo a un sobre.</p>
+    <div class="list">${L.map(e => `<div class="row" style="--c:${G.color}">
+      <button class="row-b" style="display:flex;align-items:center;gap:12px;text-align:left" data-act="edit-expense" data-id="${e.id}"><span class="ico">${G.emoji}</span><span class="row-b"><b>${esc(e.note || G.title)}</b><span>${dayShort(e.date)}</span></span></button>
       <span class="row-r">${money(e.amountCents)}</span>
-      <button class="btn-s" data-act="reimb-done" data-id="${e.id}">Ya llegó</button></div>`).join("") || `<div class="empty"><b>✓</b>Nada pendiente.</div>`}</div>
+      <button class="btn-s" data-act="reimb-done" data-id="${e.id}" data-g="${G.id}">Ya llegó</button></div>`).join("") || `<div class="empty"><b>✓</b>Nada pendiente.</div>`}</div>
+    ${L.length ? `<div class="btn-row" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-act="reimb-copy" data-g="${G.id}">⧉ Copiar reporte</button><button class="btn ghost" style="margin:0" data-act="reimb-csv" data-g="${G.id}">⬇ CSV</button></div>
+    <button class="btn" style="margin-top:10px" data-act="reimb-all" data-g="${G.id}">Ya me pagaron los ${L.length} (${money(tot)})</button>` : ""}
     ${done ? `<p class="hint" style="margin-top:12px">${done} ya ${done === 1 ? "reembolsado" : "reembolsados"} (siguen en el historial).</p>` : ""}`;
 }
-ACTIONS["open-reimb"] = () => openSheet(reimbSheetHTML());
+ACTIONS["open-reimb"] = d => openSheet(reimbSheetHTML(d.g));
 ACTIONS["reimb-done"] = d => {
   const e = exps().find(x => x.id === d.id); if (!e) return;
   e.reimbursedOn = todayKey(); save();
-  if (reimbDue().length) openSheet(reimbSheetHTML()); else closeSheet();
+  if (reimbDue(d.g).length) openSheet(reimbSheetHTML(d.g)); else closeSheet();
   refresh();
   toast(`${money(e.amountCents)} reembolsado`, { action: "Deshacer", fn: () => { delete e.reimbursedOn; save(); refresh(); } });
+};
+ACTIONS["reimb-all"] = d => {
+  const L = reimbDue(d.g), t = todayKey(); if (!L.length) return;
+  const tot = L.reduce((s, e) => s + e.amountCents, 0);
+  L.forEach(e => { e.reimbursedOn = t; }); save(); closeSheet(); refresh();
+  toast(`${money(tot)} reembolsado (${L.length} gastos)`, { action: "Deshacer", fn: () => { L.forEach(e => { delete e.reimbursedOn; }); save(); refresh(); } });
+};
+ACTIONS["reimb-copy"] = async d => {
+  const txt = reimbReport(d.g);
+  try { await navigator.clipboard.writeText(txt); toast("Reporte copiado"); }
+  catch { download(`reembolso-${d.g}-${todayKey()}.txt`, txt, "text/plain;charset=utf-8"); toast("No pude copiar; descargué un .txt"); }
+};
+ACTIONS["reimb-csv"] = d => {
+  const L = reimbDue(d.g).sort((a, b) => a.date.localeCompare(b.date));
+  const rows = [["Date", "Description", "Amount", "Payment"], ...L.map(e => [usDate(e.date), e.note || "", (e.amountCents / 100).toFixed(2), e.paymentMethod || ""])];
+  download(`reembolso-${d.g}-${todayKey()}.csv`, "\ufeff" + rows.map(r => r.map(csvEscape).join(",")).join("\n"), "text/csv;charset=utf-8");
+  toast("CSV descargado");
 };

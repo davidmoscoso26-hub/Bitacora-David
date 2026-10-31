@@ -52,6 +52,12 @@ const ENVELOPES = [
 ];
 const ENV = Object.fromEntries(ENVELOPES.map(e => [e.id, e]));
 const REIMB = { id: "reembolsable", name: "Reembolsable por la empresa", short: "Reembolsable", emoji: "🔄", color: "#9AA7B8" };
+// bolsas de reembolso: cada una se cobra en su propio momento
+const REIMB_GROUPS = [
+  { id: "fe", name: "Reembolsable · Examen FE", short: "Reemb. · FE", title: "Examen FE", emoji: "🎓", color: "#9AA7B8", hint: "te lo devuelven en unas semanas" },
+  { id: "trabajo", name: "Reembolsable · Trabajo (trenes)", short: "Reemb. · Trabajo", title: "Viajes de trabajo", emoji: "🚆", color: "#7FB6E8", hint: "se cobra con el cheque, cada 4 semanas" },
+];
+const reimbG = id => REIMB_GROUPS.find(g => g.id === id) || REIMB_GROUPS[0];   // los viejos (sin bolsa) eran del FE
 const FIXED = { id: "renta", name: "Renta", short: "Renta", emoji: "🔑", color: "#A8B3C7" };
 
 // montos en centavos
@@ -160,7 +166,7 @@ save();
 
 function catOf(kind, id) {
   if (kind === "envelope") return ENV[id] || { name: id, short: id, emoji: "•", color: "#999" };
-  if (kind === "reimb") return REIMB;
+  if (kind === "reimb") { const g = reimbG(id); return { name: g.name, short: g.short, emoji: g.emoji, color: g.color }; }
   if (kind === "fund") { const f = state.budget.funds[id]; return f ? { name: f.name, short: f.short || f.name, emoji: f.emoji, color: f.color } : { name: id, short: id, emoji: "•", color: "#999" }; }
   return FIXED;
 }

@@ -64,10 +64,10 @@ function viewHome() {
   ${inboxBanner()}
   ${sug.map((s, i) => `<div class="alert"><span style="font-size:22px">⚠️</span><p><b>${esc(ENV[s.to].short)}</b> se pasó ${money(s.need)}. <b>${esc(ENV[s.from].short)}</b> tiene holgura.</p>
     <button class="btn-s" data-act="do-suggest" data-i="${i}">Mover ${moneyR(s.cents)}</button></div>`).join("")}
-  ${reimbBanner()}
   ${unpaidTotal > 0 ? `<button class="cardbal" data-act="open-card"><span class="ico">💳</span><div><b>Debes ${money(unpaidTotal)} en la tarjeta</b><span>${unpaid.length} ${unpaid.length === 1 ? "gasto" : "gastos"} sin pagar · toca para marcarlos</span></div><span class="chev muted">›</span></button>` : ""}
   <section class="sec"><div class="sec-h"><h2 class="display">Sobres del mes</h2><span>toca uno para ver el detalle</span></div><div class="grid2">${tiles}</div></section>
-  <section class="sec"><div class="sec-h"><h2 class="display">Fondos del viaje</h2><span>no se reinician</span></div>${funds}</section>`;
+  <section class="sec"><div class="sec-h"><h2 class="display">Fondos del viaje</h2><span>no se reinician</span></div>${funds}</section>
+  ${reimbSection()}`;
 }
 
 /* ===================== HISTORIAL ===================== */
