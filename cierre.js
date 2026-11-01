@@ -13,7 +13,7 @@ function pendingClose() {
 }
 function savingsTotal() {
   let t = 0;
-  Object.values(state.budget.closes).forEach(c => Object.values(c.items).forEach(i => { if (i.mode === "save") t += i.leftCents; }));
+  Object.entries(state.budget.closes).forEach(([mk, c]) => Object.entries(c.items).forEach(([id, i]) => { if (i.mode === "save") t += closedLeft(mk, id); }));
   state.budget.savingsMoves.forEach(m => { t += m.cents; });
   return t;
 }
@@ -77,8 +77,8 @@ function savingsHTML() {
   const cls = Object.entries(state.budget.closes).sort((a, b) => b[0].localeCompare(a[0]));
   const lines = cls.map(([mk, c]) => {
     const parts = Object.entries(c.items).filter(([, i]) => i.mode === "save");
-    const tot = parts.reduce((s, [, i]) => s + i.leftCents, 0);
-    return tot ? `<div class="row" style="margin-bottom:8px"><span class="row-b"><b>${monthName(mk)}</b><span>${parts.map(([id, i]) => ENV[id].short + " " + moneyR(i.leftCents)).join(" · ")}</span></span><span class="row-r">+${money(tot)}</span></div>` : "";
+    const tot = parts.reduce((s, [id]) => s + closedLeft(mk, id), 0);
+    return tot ? `<div class="row" style="margin-bottom:8px"><span class="row-b"><b>${monthName(mk)}</b><span>${parts.map(([id, i]) => ENV[id].short + " " + moneyR(closedLeft(mk, id))).join(" · ")}</span></span><span class="row-r">+${money(tot)}</span></div>` : "";
   }).join("");
   const moves = state.budget.savingsMoves.slice().sort((a, b) => b.date.localeCompare(a.date)).map(m => `<div class="row" style="margin-bottom:8px"><span class="row-b"><b>${esc(m.note || (m.cents > 0 ? "Mandado a ahorros" : "Retirado"))}</b><span>${dayShort(m.date)}</span></span><span class="row-r">${m.cents > 0 ? "+" : "−"}${money(Math.abs(m.cents))}</span><button class="x" data-act="sv-del" data-id="${m.id}" aria-label="Quitar">✕</button></div>`).join("");
   return `<div class="sheet-h"><h3>Ahorros</h3><button class="x" data-act="close-sheet" aria-label="Cerrar">✕</button></div>

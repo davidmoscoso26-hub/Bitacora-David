@@ -25,9 +25,15 @@ function spentEnv(mk, id) {
   exps().forEach(e => { if (e.kind === "envelope" && e.targetId === id && inMonth(e, mk)) s += e.amountCents; });
   return s;
 }
-function carryIn(mk, id) {   // lo que "se quedó" del cierre del mes anterior
-  const c = state.budget.closes[prevMk(mk)], it = c && c.items[id];
-  return it && it.mode === "keep" ? Math.max(0, it.leftCents) : 0;
+// mes que se está viendo en Inicio (null = el mes actual)
+let homeMk = null;
+const viewMk = () => homeMk || mkOf(new Date());
+// lo que "se quedó" del cierre del mes anterior: se calcula en vivo, así
+// si agregas un gasto a un mes ya cerrado el arrastre y los ahorros se ajustan solos
+const closedLeft = (mk, id) => Math.max(0, effTope(mk, id) - spentEnv(mk, id));
+function carryIn(mk, id) {
+  const pm = prevMk(mk), c = state.budget.closes[pm], it = c && c.items[id];
+  return it && it.mode === "keep" ? closedLeft(pm, id) : 0;
 }
 function baseTope(mk, id) { const m = getMonth(mk); return (m.envelopes[id] || {}).topeCents || 0; }
 function effTope(mk, id) { return baseTope(mk, id) + transferNet(mk, id) + carryIn(mk, id); }
@@ -160,6 +166,12 @@ function frequent() {
 }
 const chipHTML = c => `<button class="chip" style="--c:${c.color}" aria-pressed="${!!draft && draft.kind === c.kind && draft.targetId === c.id}" data-act="pick-cat" data-kind="${c.kind}" data-id="${c.id}"><span>${c.emoji}</span>${esc(c.short)}</button>`;
 
+// si estás mirando un mes pasado en Inicio, los gastos nuevos caen en el último día de ese mes
+function addDefaultDate() {
+  const cur = mkOf(new Date());
+  if (typeof ui !== "undefined" && ui.tab === "home" && homeMk && homeMk < cur) return `${homeMk}-${pad(getMonth(homeMk).endDay)}`;
+  return todayKey();
+}
 function openAdd(opts = {}) {
   const ib = opts.inboxId ? inbox().find(x => x.id === opts.inboxId) : null;
   if (ib) {
@@ -169,7 +181,7 @@ function openAdd(opts = {}) {
     if (!e) return;
     draft = { editId: e.id, str: (e.amountCents / 100).toFixed(2), kind: e.kind, targetId: e.kind === "reimb" ? reimbG(e.targetId).id : e.targetId, date: e.date, pay: e.paymentMethod, note: e.note || "", detail: e.detail || "" };
   } else {
-    draft = { editId: null, str: "", kind: opts.kind || null, targetId: opts.targetId || null, date: todayKey(), pay: state.settings.lastPayment || "", note: "", detail: "" };
+    draft = { editId: null, str: "", kind: opts.kind || null, targetId: opts.targetId || null, date: addDefaultDate(), pay: state.settings.lastPayment || "", note: "", detail: "" };
   }
   const L = chipList(), fq = frequent();
   openSheet(`
@@ -278,7 +290,7 @@ const sortExp = a => a.slice().sort((x, y) => y.date.localeCompare(x.date) || y.
 
 ACTIONS["open-env"] = d => openEnv(d.id);
 function openEnv(id) {
-  const mk = mkOf(new Date()), e = ENV[id], pc = paceOf(mk, id), net = transferNet(mk, id), car = carryIn(mk, id), base = baseTope(mk, id);
+  const mk = viewMk(), isCur = mk === mkOf(new Date()), e = ENV[id], pc = paceOf(mk, id), net = transferNet(mk, id), car = carryIn(mk, id), base = baseTope(mk, id);
   const list = sortExp(exps().filter(x => x.kind === "envelope" && x.targetId === id && inMonth(x, mk)));
   const tfs = state.budget.transfers.filter(t => t.month === mk && (t.from === id || t.to === id));
   openSheet(`
@@ -291,15 +303,15 @@ function openEnv(id) {
     ${net || car ? `<p class="hint" style="margin-top:8px">${net ? `Transferencias: ${net > 0 ? "+" : "−"}${money(Math.abs(net))}` : ""}${net && car ? " · " : ""}${car ? `Sobrante del mes pasado: +${money(car)}` : ""}</p>` : ""}
     <div class="btn-row" style="margin-top:16px">
       <button class="btn" style="background:${e.color};color:#10131B;margin:0" data-act="open-add" data-kind="envelope" data-id="${id}">＋ Gasto aquí</button>
-      <button class="btn ghost" style="margin:0" data-act="open-transfer" data-to="${id}">↔ Mover dinero</button>
+      ${isCur ? `<button class="btn ghost" style="margin:0" data-act="open-transfer" data-to="${id}">↔ Mover dinero</button>` : ""}
     </div>
-    <p class="lbl">Este mes</p>
+    <p class="lbl">${isCur ? "Este mes" : monthName(mk)}</p>
     <div class="list">${list.length ? list.map(expRow).join("") : `<p class="hint">Todavía no hay gastos en este sobre.</p>`}
     ${tfs.map(t => tfRow(t)).join("")}</div>
   `);
 }
 INPUTS.tope = t => {
-  const mk = mkOf(new Date()), c = t.value === "" ? 0 : parseCents(t.value);
+  const mk = viewMk(), c = t.value === "" ? 0 : parseCents(t.value);
   if (c === null && t.value !== "0") return;
   getMonth(mk).envelopes[t.dataset.id].topeCents = c || 0;
   save(); refresh();

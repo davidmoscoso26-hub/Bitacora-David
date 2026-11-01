@@ -1,7 +1,7 @@
 "use strict";
 /* ===================== INICIO ===================== */
 function viewHome() {
-  const now = new Date(), mk = mkOf(now), m = getMonth(mk), p = period(mk, now), T = monthTotals(mk);
+  const now = new Date(), cur = mkOf(now), mk = homeMk || cur, isPast = mk < cur, m = getMonth(mk), p = period(mk, now), T = monthTotals(mk);
   const perDay = Math.max(0, T.left) / p.remaining;
   const expTotal = T.tope * p.fraction, diff = T.spent - expTotal;
   const st = statusOf(T.spent, T.tope, expTotal);
@@ -16,7 +16,7 @@ function viewHome() {
     ${T.tope > 0 ? `<line class="tick" x1="${tx1.toFixed(1)}" y1="${ty1.toFixed(1)}" x2="${tx2.toFixed(1)}" y2="${ty2.toFixed(1)}"/>` : ""}</svg>`;
   const over = T.left < 0;
   const rent = exps().filter(e => e.kind === "fixed" && e.targetId === "renta" && inMonth(e, mk)).reduce((s, e) => s + e.amountCents, 0);
-  const sug = suggestions(mk);
+  const sug = isPast ? [] : suggestions(mk);
   const unpaid = cardUnpaid(), unpaidTotal = unpaid.reduce((s, e) => s + e.amountCents, 0);
 
   const tiles = ENVELOPES.map(e => {
@@ -44,10 +44,12 @@ function viewHome() {
     <p class="eyebrow">${MONTHS[+mk.slice(5) - 1]} · día ${p.idx} de ${p.total}${m.startDay > 1 ? ` · desde el ${m.startDay}` : ""}</p>
     <h1 class="h1 display">Tus sobres</h1>
   </header>
+  <div class="mnav"><button class="x" data-act="home-prev" aria-label="Mes anterior" ${mk <= BUDGET_FIRST ? "disabled" : ""}>‹</button><b class="display">${MONTHS[+mk.slice(5) - 1]} ${mk.slice(0, 4)}${isPast && state.budget.closes[mk] ? " · cerrado" : ""}</b><button class="x" data-act="home-next" aria-label="Mes siguiente" ${!isPast ? "disabled" : ""}>›</button></div>
+  ${isPast ? `<div class="alert" style="margin-bottom:12px"><span style="font-size:22px">🕘</span><p>Estás viendo <b>${MONTHS[+mk.slice(5) - 1].toLowerCase()}</b>. Los gastos que agregues con ＋ llevan fecha del ${m.endDay} de ese mes${state.budget.closes[mk] ? "; el sobrante que ya cerraste se ajusta solo" : ""}.</p><button class="btn-s" data-act="home-cur">Volver a hoy</button></div>` : ""}
   <section class="card hero">
     <div class="ring-wrap">${ring}
-      <div class="ring-c"><div class="big display">${over ? "$0" : moneyR(perDay)}</div>
-        <div class="lbl">${over ? "te pasaste del total" : `por día · ${p.remaining} ${p.remaining === 1 ? "día" : "días"} más`}</div></div></div>
+      <div class="ring-c"><div class="big display">${isPast ? (over ? "−" + moneyR(-T.left) : moneyR(T.left)) : over ? "$0" : moneyR(perDay)}</div>
+        <div class="lbl">${isPast ? (over ? "de más ese mes" : "sobraron") : over ? "te pasaste del total" : `por día · ${p.remaining} ${p.remaining === 1 ? "día" : "días"} más`}</div></div></div>
     <div class="stats">
       <div class="stat"><b class="mono">${moneyR(T.spent)}</b><span>gastado</span></div>
       <div class="stat"><b class="mono" style="color:${over ? "var(--over)" : "var(--text)"}">${over ? "−" + moneyR(-T.left) : moneyR(T.left)}</b><span>${over ? "de más" : "restante"}</span></div>
@@ -55,7 +57,7 @@ function viewHome() {
     </div>
     <div class="hero-foot">
       <span class="pill s-${st}">${st === "idle" ? "Sin presupuesto" : st === "over" ? `Te pasaste ${moneyR(T.spent - T.tope)}` : diff <= 0 ? `${moneyR(-diff)} por debajo del ritmo` : `${moneyR(diff)} por encima del ritmo`}</span>
-      ${streak >= 2 ? `<span class="pill plain" style="--p:var(--high)">🔥 ${streak} días en ritmo</span>` : ""}
+      ${streak >= 2 && !isPast ? `<span class="pill plain" style="--p:var(--high)">🔥 ${streak} días en ritmo</span>` : ""}
     </div>
     <p class="legend-note">El anillo se colorea según en qué gastaste. La marca blanca es dónde deberías ir hoy.</p>
   </section>
@@ -69,6 +71,10 @@ function viewHome() {
   <section class="sec"><div class="sec-h"><h2 class="display">Fondos del viaje</h2><span>no se reinician</span></div>${funds}</section>
   ${reimbSection()}`;
 }
+
+ACTIONS["home-prev"] = () => { const mk = viewMk(); if (mk > BUDGET_FIRST) { homeMk = prevMk(mk); render(); } };
+ACTIONS["home-next"] = () => { const mk = viewMk(), nk = nextMk(mk), cur = mkOf(new Date()); homeMk = nk >= cur ? null : nk; render(); };
+ACTIONS["home-cur"] = () => { homeMk = null; render(); };
 
 /* ===================== HISTORIAL ===================== */
 const hist = { mk: "all", cat: "", pay: "", q: "" };
